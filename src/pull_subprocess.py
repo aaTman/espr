@@ -7,6 +7,7 @@ import os
 import re
 from datetime import datetime, timedelta
 import numpy as np
+import click
 
 def date_range_seasonal(season, date_range=None):
     if date_range is not None:
