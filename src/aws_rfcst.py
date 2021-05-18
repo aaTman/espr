@@ -12,6 +12,35 @@ from tempfile import TemporaryDirectory
 import s3fs
 import pathlib
 
+def create_selection_dict(
+    latitude_bounds: Iterable[float],
+    longitude_bounds: Iterable[float],
+    forecast_days_bounds: Iterable[float],
+) -> Dict[str, slice]:
+    """Generate parameters to slice an xarray Dataset.
+    Parameters
+    ----------
+    latitude_bounds : Iterable[float]
+        The minimum and maximum latitude bounds to select.
+    longitude_bounds : Iterable[float]
+        The minimum and maximum longitudes bounds to select.
+    forecast_days_bounds : Iterable[float]
+        The earliest and latest forecast days to select.
+    Returns
+    -------
+    Dict[str, slice]
+        A dictionary of slices to use on an xarray Dataset.
+    """
+    latitude_slice = slice(max(latitude_bounds), min(latitude_bounds))
+    longitude_slice = slice(min(longitude_bounds), max(longitude_bounds))
+    first_forecast_hour = pd.Timedelta(f"{min(forecast_days_bounds)} days")
+    last_forecast_hour = pd.Timedelta(f"{max(forecast_days_bounds)} days")
+    forecast_hour_slice = slice(first_forecast_hour, last_forecast_hour)
+    selection_dict = dict(
+        latitude=latitude_slice, longitude=longitude_slice, step=forecast_hour_slice
+    )
+    return selection_dict
+
 def date_range_seasonal(season, date_range=None):
     if date_range is not None:
         pass
@@ -48,16 +77,54 @@ def download_file(path):
             f2.write(f.read())
     return fpath
 
-
-
-
-
-def subset_grib():
-    
-
 def combine_ens(output: str):
 
-def download_process_reforecast():
+@click.command()
+@click.option(
+    "-v",
+    "--var-names",
+    default=["dswrf_sfc", "tcdc_eatm", "apcp_sfc"],
+    help="Gridded fields to download.",
+    multiple=True,
+)
+@click.option(
+    "-p",
+    "--pressure-levels",
+    default=[],
+    multiple=True,
+    help="Pressure levels to use, if some pressure field is used.",
+)
+@click.option(
+    "--latitude-bounds",
+    nargs=2,
+    type=click.Tuple([float, float]),
+    default=(20, 60),
+    help="Bounds for latitude range to keep when processing data.",
+)
+@click.option(
+    "--longitude-bounds",
+    nargs=2,
+    type=click.Tuple([float, float]),
+    default=(180, 310),
+    help="Bounds for longitude range to keep when processing data, assumes values between 0-360.",
+)
+@click.option(
+    "--forecast-days",
+    nargs=2,
+    type=click.Tuple([float, float]),
+    default=(0, 7),
+    help="Bounds for forecast days, where something like 5.5 would be 5 days 12 hours.",
+)
+@click.option(
+    "--n-jobs", default=28, help="Number of jobs to run in parallel.",
+)
+def download_process_reforecast(
+    var_names,
+    pressure_levels,
+    latitude_bounds,
+    longitude_bounds,
+    forecast_days,
+    n_jobs):
 
 if __name__ == "__main__":
     download_process_reforecast()
