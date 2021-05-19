@@ -1,3 +1,5 @@
+# pyright: reportMissingImports=false, reportMissingModuleSource=false
+
 import subprocess
 import pandas as pd 
 import boto3
@@ -12,6 +14,7 @@ from tempfile import TemporaryDirectory
 import s3fs
 import pathlib
 import asyncio
+from collections.abc import Iterable, Dict
 
 def create_selection_dict(
     latitude_bounds: Iterable[float],
