@@ -11,6 +11,7 @@ import click
 from tempfile import TemporaryDirectory
 import s3fs
 import pathlib
+import asyncio
 
 def create_selection_dict(
     latitude_bounds: Iterable[float],
@@ -58,13 +59,7 @@ def date_range_seasonal(season, date_range=None):
                    ]
     return dr
 
-source = 'https://noaa-gefs-retrospective.s3.amazonaws.com/GEFSv12/reforecast/'
-bucket = 'noaa-gefs-retrospective/GEFSv12/reforecast'
-vnames = ['dswrf_sfc_'] # ,'apcp_sfc_']'hgt_pres_abv700mb_','pres_msl_','tmp_pres_','pwat_eatm_', 'ugrd_hgt_','vgrd_hgt_' add in later
-ens = ['c00','p01','p02','p03','p04']
-s3 = boto3.client('s3')
-
-def download_file(path):
+async def download_file(path): 
     base_file_name = s3_prefix.split("/")[-1]
     fpath = os.path.join(save_dir, f"{base_file_name.split('.')[0]}.nc")
     if pathlib.Path(fpath).exists():
@@ -77,7 +72,7 @@ def download_file(path):
             f2.write(f.read())
     return fpath
 
-def combine_ens(output: str):
+# def combine_ens(output: str):
 
 @click.command()
 @click.option(
@@ -118,13 +113,31 @@ def combine_ens(output: str):
 @click.option(
     "--n-jobs", default=28, help="Number of jobs to run in parallel.",
 )
+@click.option(
+    "-s",
+    "--season",
+    default='djf',
+    help="Season to pull data from. djf, mam, jja, son.",
+)
 def download_process_reforecast(
     var_names,
     pressure_levels,
     latitude_bounds,
     longitude_bounds,
     forecast_days,
-    n_jobs):
+    n_jobs,
+    season):
+    source = 'https://noaa-gefs-retrospective.s3.amazonaws.com/GEFSv12/reforecast/'
+    bucket = 'noaa-gefs-retrospective/GEFSv12/reforecast'
+    ens = ['c00','p01','p02','p03','p04']
+    dr = date_range_seasonal(season)
+    selection_dict = create_selection_dict(
+            latitude_bounds, longitude_bounds, forecast_days
+        )  
+    ##1. download all 5 ensembles at a time 2. process into mean and spread 3. compress
+
+    # loop here, bunch into ensembles for each run at a time
+    asyncio.get_event_loop().run_until_complete(download_file(sites))
 
 if __name__ == "__main__":
     download_process_reforecast()
