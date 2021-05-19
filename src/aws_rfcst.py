@@ -15,6 +15,7 @@ import s3fs
 import pathlib
 import asyncio
 from collections.abc import Iterable, Dict
+import logging
 
 def create_selection_dict(
     latitude_bounds: Iterable[float],
@@ -73,6 +74,8 @@ async def download_file(path):
         grib_file = os.path.join(dir, base_file_name)
         with fs.open(s3_prefix, "rb") as f, open(grib_file, "wb") as f2:
             f2.write(f.read())
+
+        
     return fpath
 
 # def combine_ens(output: str):
@@ -122,6 +125,16 @@ async def download_file(path):
     default='djf',
     help="Season to pull data from. djf, mam, jja, son.",
 )
+@click.option(
+    "--local-dir",
+    default="./reforecast_v3",
+    help="Location to save processed data.",
+)
+@click.option(
+    "--final-file",
+    default="./combined_reforecast_data.nc",
+    help="Saved name of the combined netCDF file.",
+)
 def download_process_reforecast(
     var_names,
     pressure_levels,
@@ -129,7 +142,9 @@ def download_process_reforecast(
     longitude_bounds,
     forecast_days,
     n_jobs,
-    season):
+    season,
+    local_dir,
+    final_file):
     source = 'https://noaa-gefs-retrospective.s3.amazonaws.com/GEFSv12/reforecast/'
     bucket = 'noaa-gefs-retrospective/GEFSv12/reforecast'
     ens = ['c00','p01','p02','p03','p04']
