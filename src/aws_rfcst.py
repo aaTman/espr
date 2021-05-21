@@ -63,19 +63,17 @@ def date_range_seasonal(season, date_range=None):
                    ]
     return dr
 
-async def download_file(path): 
-    base_file_name = s3_prefix.split("/")[-1]
-    fpath = os.path.join(save_dir, f"{base_file_name.split('.')[0]}.nc")
+async def download_process_file(path, temp_dir): 
+    base_file_name = path.split("/")[-1]
+    fpath = os.path.join(temp_dir, f"{base_file_name.split('.')[0]}.nc")
     if pathlib.Path(fpath).exists():
         return fpath
 
     fs = s3fs.S3FileSystem(anon=True)
-    with TemporaryDirectory() as dir:
-        grib_file = os.path.join(dir, base_file_name)
-        with fs.open(s3_prefix, "rb") as f, open(grib_file, "wb") as f2:
-            f2.write(f.read())
+    grib_file = os.path.join(dir, base_file_name)
+    with fs.open(path, "rb") as f, open(grib_file, "wb") as f2:
+        f2.write(f.read())
 
-        
     return fpath
 
 # def combine_ens(output: str):
@@ -135,7 +133,7 @@ async def download_file(path):
     default="./combined_reforecast_data.nc",
     help="Saved name of the combined netCDF file.",
 )
-def download_process_reforecast(
+async def download_process_reforecast(
     var_names,
     pressure_levels,
     latitude_bounds,
@@ -153,9 +151,15 @@ def download_process_reforecast(
             latitude_bounds, longitude_bounds, forecast_days
         )  
     ##1. download all 5 ensembles at a time 2. process into mean and spread 3. compress
-
+    s3_list = [bucket+n.strftime('/%Y/%Y%m%d00/')+m+n.strftime(f'/Days:1-10/{wx_var}_%Y%m%d00.grib2') 
+    for n in dr 
+    for m in ens 
+    for wx_var in var_names]
+    s3_list_gen = (s3_list[i:i+5] for i in range(0, len(s3_list), 5))
     # loop here, bunch into ensembles for each run at a time
-    asyncio.get_event_loop().run_until_complete(download_file(sites))
+    tasks = [download_process_file(n) for n in s3_list_gen]
+    with TemporaryDirectory() as dir:
+       await asyncio.gather(*tasks) 
 
 if __name__ == "__main__":
-    download_process_reforecast()
+    asyncio.run(download_process_reforecast())
