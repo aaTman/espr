@@ -14,8 +14,11 @@ from tempfile import TemporaryDirectory
 import s3fs
 import pathlib
 import asyncio
-from collections.abc import Iterable, Dict
+from typing import Iterable, Dict
 import logging
+import aiobotocore
+import aiofiles
+import time
 
 def create_selection_dict(
     latitude_bounds: Iterable[float],
@@ -63,18 +66,37 @@ def date_range_seasonal(season, date_range=None):
                    ]
     return dr
 
-async def download_process_file(path, temp_dir): 
-    base_file_name = path.split("/")[-1]
-    fpath = os.path.join(temp_dir, f"{base_file_name.split('.')[0]}.nc")
-    if pathlib.Path(fpath).exists():
-        return fpath
-
+def download_process_file(paths):
+    base_file_name = paths.split('/')[-1]
     fs = s3fs.S3FileSystem(anon=True)
-    grib_file = os.path.join(dir, base_file_name)
-    with fs.open(path, "rb") as f, open(grib_file, "wb") as f2:
+    grib_file = os.path.join('download/', base_file_name)
+    with fs.open(paths, "rb") as f, open(grib_file, "wb") as f2:
         f2.write(f.read())
 
-    return fpath
+
+
+async def download_files(files):
+    bucket = 'noaa-gefs-retrospective'
+    filenames = [n.split('/')[-1] for n in files]
+    folder = 'GEFSv12/reforecast/2000/2000052100/c00/Days:1-10'
+    session = aiobotocore.get_session()
+    async with session.create_client('s3', region_name='us-west-2') as client:
+        start = time.time()
+        for s3_file in files:
+            try:
+                filename = s3_file.split('/')[-1]
+                async with aiofiles.open(f"download/{filename}", "wb") as data:
+                    response = await client.get_object(
+                        Bucket=bucket, Key=s3_file
+                    )
+                    async with response["Body"] as stream:
+                        content = await stream.read()
+                        await data.write(content)
+
+            except FileNotFoundError as e:
+                print(e)
+        end = time.time()
+        print(int(end - start))
 
 # def combine_ens(output: str):
 
@@ -159,7 +181,7 @@ async def download_process_reforecast(
     # loop here, bunch into ensembles for each run at a time
     tasks = [download_process_file(n) for n in s3_list_gen]
     with TemporaryDirectory() as dir:
-       await asyncio.gather(*tasks) 
+       await download_files(s3_list_gen)
 
 if __name__ == "__main__":
     asyncio.run(download_process_reforecast())
