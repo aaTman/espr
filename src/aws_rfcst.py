@@ -66,39 +66,47 @@ def date_range_seasonal(season, date_range=None):
                    ]
     return dr
 
-def download_process_file(paths):
-    base_file_name = paths.split('/')[-1]
-    fs = s3fs.S3FileSystem(anon=True)
-    grib_file = os.path.join('download/', base_file_name)
-    with fs.open(paths, "rb") as f, open(grib_file, "wb") as f2:
-        f2.write(f.read())
-
-
-
-async def download_files(files):
+async def dl(dir):
     bucket = 'noaa-gefs-retrospective'
     filenames = [n.split('/')[-1] for n in files]
     folder = 'GEFSv12/reforecast/2000/2000052100/c00/Days:1-10'
     session = aiobotocore.get_session()
     async with session.create_client('s3', region_name='us-west-2') as client:
-        start = time.time()
         for s3_file in files:
             try:
                 filename = s3_file.split('/')[-1]
-                async with aiofiles.open(f"download/{filename}", "wb") as data:
+                async with aiofiles.open(f"{dir}/{filename}", "wb") as data:
                     response = await client.get_object(
                         Bucket=bucket, Key=s3_file
                     )
                     async with response["Body"] as stream:
                         content = await stream.read()
                         await data.write(content)
-
+                
             except FileNotFoundError as e:
                 print(e)
-        end = time.time()
-        print(int(end - start))
+        
 
-# def combine_ens(output: str):
+
+async def combine(dir):
+    ds = xr.open_mfdataset(f"{dir}/*.grib2",engine='cfgrib',
+                               combine='nested',
+                               concat_dim='member',
+                               
+                               coords='minimal',
+                               compat='override',
+                               backend_kwargs={
+                        'filter_by_keys': {'dataType': 'cf'},
+                        'errors': 'ignore'
+                    })
+    ds_mean = ds.mean('member')
+    ds_std = ds.std('member')
+    print(ds_mean)
+    print(ds_std)
+
+async def pull_compress(dir):
+    await dl(dir)
+    await combine(dir)
 
 @click.command()
 @click.option(
