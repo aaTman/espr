@@ -186,6 +186,6 @@ async def download_process_reforecast(
     files = [n for n in s3_list_gen]
     with TemporaryDirectory() as fpath:
        [await pull_compress(fpath, files, selection_dict, final_path) for files in s3_list_gen]
-
+    
 if __name__ == "__main__":
     asyncio.run(download_process_reforecast())
