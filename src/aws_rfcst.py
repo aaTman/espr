@@ -107,8 +107,9 @@ async def combine(fpath, fnames, selection_dict, final_path):
     ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc")
 
 async def pull_compress(fpath, fnames, selection_dict, final_path):
-    await dl(fpath, fnames)
-    await combine(fpath, selection_dict, final_path)
+    with TemporaryDirectory() as fpath:
+        await dl(fpath, fnames)
+        await combine(fpath, selection_dict, final_path)
 
 @click.command()
 @click.option(
@@ -183,10 +184,8 @@ async def download_process_reforecast(
     for m in ens 
     for wx_var in var_names]
     s3_list_gen = (s3_list[i:i+5] for i in range(0, len(s3_list), 5))
-    files = [n for n in s3_list_gen]
-    async with TemporaryDirectory() as fpath:
-       [await pull_compress(fpath, files, selection_dict, final_path) for files in s3_list_gen]
+    files_list = [n for n in s3_list_gen]
+    await asyncio.gather(*[pull_compress(files, selection_dict, final_path) for files in files_list])
     
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
     asyncio.run(download_process_reforecast())
