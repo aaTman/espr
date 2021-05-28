@@ -188,4 +188,4 @@ async def download_process_reforecast(
        [await pull_compress(fpath, files, selection_dict, final_path) for files in s3_list_gen]
     
 if __name__ == "__main__":
-    asyncio.run(download_process_reforecast())
+    asyncio.run_coroutine_threadsafe(download_process_reforecast())
