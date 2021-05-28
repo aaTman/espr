@@ -24,6 +24,7 @@ def create_selection_dict(
     latitude_bounds: Iterable[float],
     longitude_bounds: Iterable[float],
     forecast_days_bounds: Iterable[float],
+    pressure_levels: Iterable[float],
 ) -> Dict[str, slice]:
     """Generate parameters to slice an xarray Dataset.
     Parameters
@@ -39,10 +40,12 @@ def create_selection_dict(
     Dict[str, slice]
         A dictionary of slices to use on an xarray Dataset.
     """
+    if len(pressure_levels) > 0:
+        print('pressure levels not set up yet')
     latitude_slice = slice(max(latitude_bounds), min(latitude_bounds))
     longitude_slice = slice(min(longitude_bounds), max(longitude_bounds))
     first_forecast_hour = pd.Timedelta(f"{min(forecast_days_bounds)} days")
-    last_forecast_hour = pd.Timedelta(f"{max(forecast_days_bounds)} days")
+    last_forecast_hour = pd.Timedelta(f"{max(forecast_days_bounds)} days 01:00:00")
     forecast_hour_slice = slice(first_forecast_hour, last_forecast_hour)
     selection_dict = dict(
         latitude=latitude_slice, longitude=longitude_slice, step=forecast_hour_slice
@@ -66,16 +69,16 @@ def date_range_seasonal(season, date_range=None):
                    ]
     return dr
 
-async def dl(dir):
+async def dl(fpath, fnames):
     bucket = 'noaa-gefs-retrospective'
-    filenames = [n.split('/')[-1] for n in files]
+    filenames = [n.split('/')[-1] for n in fnames]
     folder = 'GEFSv12/reforecast/2000/2000052100/c00/Days:1-10'
     session = aiobotocore.get_session()
     async with session.create_client('s3', region_name='us-west-2') as client:
-        for s3_file in files:
+        for s3_file in fnames:
             try:
                 filename = s3_file.split('/')[-1]
-                async with aiofiles.open(f"{dir}/{filename}", "wb") as data:
+                async with aiofiles.open(f"{fpath}/{filename}", "wb") as data:
                     response = await client.get_object(
                         Bucket=bucket, Key=s3_file
                     )
@@ -85,11 +88,10 @@ async def dl(dir):
                 
             except FileNotFoundError as e:
                 print(e)
-        
 
-
-async def combine(dir):
-    ds = xr.open_mfdataset(f"{dir}/*.grib2",engine='cfgrib',
+async def combine(fpath, fnames, selection_dict, final_path):
+    output_file = f"{fnames[0].split('.')[0][:-4]}"
+    ds = xr.open_mfdataset(f"{fpath}/*.grib2",engine='cfgrib',
                                combine='nested',
                                concat_dim='member',
                                
@@ -99,14 +101,15 @@ async def combine(dir):
                         'filter_by_keys': {'dataType': 'cf'},
                         'errors': 'ignore'
                     })
+    ds = ds.sel(selection_dict)
     ds_mean = ds.mean('member')
     ds_std = ds.std('member')
-    print(ds_mean)
-    print(ds_std)
+    ds_mean.to_netcdf(f"{final_path}/{output_file}_mean.nc")
+    ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc")
 
-async def pull_compress(dir):
-    await dl(dir)
-    await combine(dir)
+async def pull_compress(fpath, fnames, selection_dict, final_path):
+    await dl(fpath, fnames)
+    await combine(fpath, selection_dict, final_path)
 
 @click.command()
 @click.option(
@@ -127,7 +130,7 @@ async def pull_compress(dir):
     "--latitude-bounds",
     nargs=2,
     type=click.Tuple([float, float]),
-    default=(20, 60),
+    default=(60, 20),
     help="Bounds for latitude range to keep when processing data.",
 )
 @click.option(
@@ -145,23 +148,15 @@ async def pull_compress(dir):
     help="Bounds for forecast days, where something like 5.5 would be 5 days 12 hours.",
 )
 @click.option(
-    "--n-jobs", default=28, help="Number of jobs to run in parallel.",
-)
-@click.option(
     "-s",
     "--season",
     default='djf',
     help="Season to pull data from. djf, mam, jja, son.",
 )
 @click.option(
-    "--local-dir",
-    default="./reforecast_v3",
-    help="Location to save processed data.",
-)
-@click.option(
-    "--final-file",
-    default="./combined_reforecast_data.nc",
-    help="Saved name of the combined netCDF file.",
+    "--final-path",
+    default='home/taylorm/espr/reforecast_v12/test',
+    help="Where to save final file to.",
 )
 async def download_process_reforecast(
     var_names,
@@ -169,27 +164,29 @@ async def download_process_reforecast(
     latitude_bounds,
     longitude_bounds,
     forecast_days,
-    n_jobs,
     season,
-    local_dir,
-    final_file):
+    final_path):
     source = 'https://noaa-gefs-retrospective.s3.amazonaws.com/GEFSv12/reforecast/'
     bucket = 'noaa-gefs-retrospective/GEFSv12/reforecast'
     ens = ['c00','p01','p02','p03','p04']
     dr = date_range_seasonal(season)
     selection_dict = create_selection_dict(
-            latitude_bounds, longitude_bounds, forecast_days
-        )  
+            latitude_bounds, longitude_bounds, forecast_days, pressure_levels
+        )
+    s3_list = ['GEFSv12/reforecast'+n.strftime('/%Y/%Y%m%d00/')+m+n.strftime(f'/Days:1-10/{wx_var}_%Y%m%d00_{m}.grib2') 
+    for wx_var in var_names 
+    for n in dr 
+    for m in ens]
+          
     ##1. download all 5 ensembles at a time 2. process into mean and spread 3. compress
     s3_list = [bucket+n.strftime('/%Y/%Y%m%d00/')+m+n.strftime(f'/Days:1-10/{wx_var}_%Y%m%d00.grib2') 
     for n in dr 
     for m in ens 
     for wx_var in var_names]
     s3_list_gen = (s3_list[i:i+5] for i in range(0, len(s3_list), 5))
-    # loop here, bunch into ensembles for each run at a time
-    tasks = [download_process_file(n) for n in s3_list_gen]
-    with TemporaryDirectory() as dir:
-       await download_files(s3_list_gen)
+    files = [n for n in s3_list_gen]
+    with TemporaryDirectory() as fpath:
+       [await pull_compress(fpath, files, selection_dict, final_path) for files in s3_list_gen]
 
 if __name__ == "__main__":
     asyncio.run(download_process_reforecast())
