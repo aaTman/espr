@@ -1,30 +1,35 @@
-# pyright: reportMissingImports=false, reportMissingModuleSource=false
 import subprocess
-import pandas as pd 
-import boto3
+import pandas as pd
 import xarray as xr
 import urllib 
 import os
 import re
 from datetime import datetime, timedelta
 import numpy as np
-import click
-from tempfile import TemporaryDirectory
 import s3fs
-import pathlib
 import asyncio
-from typing import Iterable, Dict
-import logging
 import aiobotocore
 import aiofiles
 import time
+import cfgrib
+import tempfile
+from contextlib import closing
+from botocore import UNSIGNED
+import aioboto3
+from botocore.client import Config
+
+config = Config(
+    read_timeout=600,
+    connect_timeout=600,
+    retries={"max_attempts": 0}
+)
 
 def create_selection_dict(
-    latitude_bounds: Iterable[float],
-    longitude_bounds: Iterable[float],
-    forecast_days_bounds: Iterable[float],
-    pressure_levels: Iterable[float],
-) -> Dict[str, slice]:
+    latitude_bounds,
+    longitude_bounds,
+    forecast_days_bounds,
+    pressure_levels,
+):
     """Generate parameters to slice an xarray Dataset.
     Parameters
     ----------
@@ -68,28 +73,25 @@ def date_range_seasonal(season, date_range=None):
                    ]
     return dr
 
-async def dl(fpath, fnames):
+async def dl(fnames, selection_dict, final_path):
+
     bucket = 'noaa-gefs-retrospective'
     filenames = [n.split('/')[-1] for n in fnames]
-    folder = 'GEFSv12/reforecast/2000/2000052100/c00/Days:1-10'
-    session = aiobotocore.get_session()
-    async with session.create_client('s3', region_name='us-west-2') as client:
-        for s3_file in fnames:
-            try:
-                filename = s3_file.split('/')[-1]
-                async with aiofiles.open(f"{fpath}/{filename}", "wb") as data:
-                    response = await client.get_object(
-                        Bucket=bucket, Key=s3_file
-                    )
-                    async with response["Body"] as stream:
-                        content = await stream.read()
-                        await data.write(content)
-                
-            except FileNotFoundError as e:
-                print(e)
-
-async def combine(fpath, fnames, selection_dict, final_path):
-    output_file = f"{fnames[0].split('.')[0][:-4]}"
+    fpaths = ['/'.join(n.split('/')[0:-1]) for n in fnames]
+    async with aiofiles.tempfile.TemporaryDirectory() as fpath:
+        async with aioboto3.resource('s3') as s3:
+            for s3_file in fnames:
+                try:
+                    filename = s3_file.split('/')[-1]
+                    await s3.meta.client.download_file(bucket, s3_file, f"{fpath}/{filename}")
+                except FileNotFoundError as e:
+                    print(e)
+        combine(fpath, fnames, selection_dict, final_path)
+        return f"{s3_file} downloaded, data written, combined"
+    
+def combine(fpath, fnames, selection_dict, final_path):
+    output_file = f"{fnames[0].split('/')[-1].split('.')[-2][:-4]}"
+    print(f"{output_file}")
     ds = xr.open_mfdataset(f"{fpath}/*.grib2",engine='cfgrib',
                                combine='nested',
                                concat_dim='member',
@@ -103,13 +105,9 @@ async def combine(fpath, fnames, selection_dict, final_path):
     ds = ds.sel(selection_dict)
     ds_mean = ds.mean('member')
     ds_std = ds.std('member')
-    ds_mean.to_netcdf(f"{final_path}/{output_file}_mean.nc")
-    ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc")
+    ds_mean.to_netcdf(f"{final_path}/{output_file}_mean.nc", compute=False)
+    ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",compute=False)
 
-async def pull_compress(fpath, fnames, selection_dict, final_path):
-    with TemporaryDirectory() as fpath:
-        await dl(fpath, fnames)
-        await combine(fpath, selection_dict, final_path)
 
 @click.command()
 @click.option(
@@ -177,15 +175,12 @@ async def download_process_reforecast(
     for wx_var in var_names 
     for n in dr 
     for m in ens]
-          
-    ##1. download all 5 ensembles at a time 2. process into mean and spread 3. compress
-    s3_list = [bucket+n.strftime('/%Y/%Y%m%d00/')+m+n.strftime(f'/Days:1-10/{wx_var}_%Y%m%d00.grib2') 
-    for n in dr 
-    for m in ens 
-    for wx_var in var_names]
+
     s3_list_gen = (s3_list[i:i+5] for i in range(0, len(s3_list), 5))
     files_list = [n for n in s3_list_gen]
-    await asyncio.gather(*[pull_compress(files, selection_dict, final_path) for files in files_list])
+    coro = [dl(files, selection_dict, final_path) for files in files_list]
+    
+    await asyncio.gather(*coro)
     
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
