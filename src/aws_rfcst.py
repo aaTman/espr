@@ -23,7 +23,7 @@ import asyncclick as click
 config = Config(
     read_timeout=600,
     connect_timeout=600,
-    retries={"max_attempts": 0}
+    retries={"max_attempts": 2}
 )
 
 def create_selection_dict(
@@ -82,6 +82,7 @@ async def dl(fnames, selection_dict, final_path):
     fpaths = ['/'.join(n.split('/')[0:-1]) for n in fnames]
     async with aiofiles.tempfile.TemporaryDirectory() as fpath:
         async with aioboto3.resource('s3') as s3:
+            import pdb; pdb.set_trace()
             for s3_file in fnames:
                 try:
                     filename = s3_file.split('/')[-1]
