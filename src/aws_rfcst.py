@@ -81,7 +81,7 @@ async def dl(fnames, selection_dict, final_path):
     filenames = [n.split('/')[-1] for n in fnames]
     fpaths = ['/'.join(n.split('/')[0:-1]) for n in fnames]
     async with aiofiles.tempfile.TemporaryDirectory() as fpath:
-        async with aioboto3.resource('s3') as s3:
+        async with aioboto3.resource('s3',config=config) as s3:
             import pdb; pdb.set_trace()
             for s3_file in fnames:
                 try:
