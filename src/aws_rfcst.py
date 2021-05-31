@@ -24,8 +24,8 @@ import logging
 logging.basicConfig(filename='output.log', level=logging.WARNING)
 
 config = Config(
-    read_timeout=5,
-    connect_timeout=5,
+    read_timeout=60,
+    connect_timeout=60,
     retries={"max_attempts": 5}
 )
 
