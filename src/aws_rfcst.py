@@ -19,6 +19,9 @@ from botocore import UNSIGNED
 import aioboto3
 from botocore.client import Config
 import asyncclick as click
+import logging
+
+logging.basicConfig(filename='output.log', encoding='utf-8', level=logging.WARNING)
 
 config = Config(
     read_timeout=5,
@@ -58,6 +61,10 @@ def create_selection_dict(
     )
     return selection_dict
 
+def warning(fpath,filetype='.gr'):
+    return len([n for n in os.listdir() if filetype in n])
+
+
 def date_range_seasonal(season, date_range=None):
     if date_range is not None:
         pass
@@ -87,13 +94,19 @@ async def dl(fnames, selection_dict, final_path):
                     filename = s3_file.split('/')[-1]
                     await s3.meta.client.download_file(bucket, s3_file, f"{fpath}/{filename}")
                 except FileNotFoundError as e:
+                    logging.warning(f"{filename} not downloaded, not found")
                     print(e)
+                    pass
                 except aiobotocore.response.AioReadTimeoutError as e:
+                    logging.warning(f"{filename} not downloaded, timeout")
                     print(e)
+                    pass
         combine(fpath, fnames, selection_dict, final_path)
         return f"{s3_file} downloaded, data written, combined"
     
 def combine(fpath, fnames, selection_dict, final_path):
+    if warning(fpath) < 5:
+        logging.warning(f"{fnames} mean will be less than 5")
     output_file = f"{fnames[0].split('/')[-1].split('.')[-2][:-4]}"
     print(f"{output_file}")
     ds = xr.open_mfdataset(f"{fpath}/*.grib2",engine='cfgrib',
