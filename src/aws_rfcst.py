@@ -21,7 +21,7 @@ from botocore.client import Config
 import asyncclick as click
 import logging
 
-logging.basicConfig(filename='output.log', encoding='utf-8', level=logging.WARNING)
+logging.basicConfig(filename='output.log', level=logging.WARNING)
 
 config = Config(
     read_timeout=5,
