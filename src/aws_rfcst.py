@@ -23,7 +23,7 @@ import asyncclick as click
 config = Config(
     read_timeout=5,
     connect_timeout=5,
-    retries={"max_attempts": 2}
+    retries={"max_attempts": 5}
 )
 
 def create_selection_dict(
