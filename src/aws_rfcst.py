@@ -88,6 +88,8 @@ async def dl(fnames, selection_dict, final_path):
                     await s3.meta.client.download_file(bucket, s3_file, f"{fpath}/{filename}")
                 except FileNotFoundError as e:
                     print(e)
+                except aiobotocore.response.AioReadTimeoutError:
+                    print(e)
         combine(fpath, fnames, selection_dict, final_path)
         return f"{s3_file} downloaded, data written, combined"
     
