@@ -90,6 +90,13 @@ async def gather_with_concurrency(n, *tasks):
             return await task
     return await asyncio.gather(*(sem_task(task) for task in tasks))
 
+def file_check(final_path, output_file):
+    if os.path.exists(f"{final_path}/{output_file}_std.nc"):
+        logging.warning(f"{output_file} already processed, skipping")
+        return True
+    else:
+        return False
+
 async def dl(fnames, selection_dict, final_path):
 
     bucket = 'noaa-gefs-retrospective'
@@ -99,8 +106,7 @@ async def dl(fnames, selection_dict, final_path):
         async with aioboto3.resource('s3',config=config) as s3:
             for s3_file in fnames:
                 output_file = f"{fnames[0].split('/')[-1].split('.')[-2][:-4]}"
-                if os.path.exists(f"{final_path}/{output_file}_std.nc"):
-                    logging.warning(f"{output_file} already processed, skipping")
+                if file_check(final_path, output_file):
                     pass
                 else:
                     try:
@@ -115,10 +121,14 @@ async def dl(fnames, selection_dict, final_path):
                         logging.warning(f"{filename} not downloaded, timeout")
                         print(e)
                         pass
-        combine(fpath, output_file, selection_dict, final_path)
+            if file_check(final_path, output_file):
+                combine(fpath, output_file, selection_dict, final_path)
+            else:
+                pass
         return f"{s3_file} downloaded, data written, combined"
     
 def combine(fpath, output_file, selection_dict, final_path):
+
     if warning(fpath) < 5:
         logging.warning(f"{output_file} mean will be less than 5")
     print(f"{output_file}")
