@@ -118,16 +118,19 @@ def combine(fpath, fnames, selection_dict, final_path):
         logging.warning(f"{fnames} mean will be less than 5")
     output_file = f"{fnames[0].split('/')[-1].split('.')[-2][:-4]}"
     print(f"{output_file}")
-    ds = xr.open_mfdataset(f"{fpath}/*.grib2",engine='cfgrib',
-                               combine='nested',
-                               concat_dim='member',
-                               
-                               coords='minimal',
-                               compat='override',
-                               backend_kwargs={
-                        'filter_by_keys': {'dataType': 'cf'},
-                        'errors': 'ignore'
-                    })
+    try:
+        ds = xr.open_mfdataset(f"{fpath}/*.grib2",engine='cfgrib',
+                                combine='nested',
+                                concat_dim='member',
+                                
+                                coords='minimal',
+                                compat='override',
+                                backend_kwargs={
+                            'filter_by_keys': {'dataType': 'cf'},
+                            'errors': 'ignore'
+                        })
+    except KeyError as e:
+        logging.error(e)
     ds = ds.sel(selection_dict)
     ds_mean = ds.mean('member')
     ds_std = ds.std('member')
