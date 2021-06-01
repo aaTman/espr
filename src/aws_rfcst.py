@@ -182,6 +182,11 @@ def combine(fpath, fnames, selection_dict, final_path):
     default='home/taylorm/espr/reforecast_v12/test',
     help="Where to save final file to.",
 )
+@click.option(
+    '--semaphore',
+    default=10,
+    help="Number of tasks to run in async at once before worker denials."
+)
 async def download_process_reforecast(
     var_names,
     pressure_levels,
@@ -189,7 +194,8 @@ async def download_process_reforecast(
     longitude_bounds,
     forecast_days,
     season,
-    final_path):
+    final_path,
+    sema):
     source = 'https://noaa-gefs-retrospective.s3.amazonaws.com/GEFSv12/reforecast/'
     bucket = 'noaa-gefs-retrospective/GEFSv12/reforecast'
     ens = ['c00','p01','p02','p03','p04']
@@ -206,7 +212,7 @@ async def download_process_reforecast(
     files_list = [n for n in s3_list_gen]
     coro = [dl(files, selection_dict, final_path) for files in files_list]
     
-    await gather_with_concurrency(10, *coro)
+    await gather_with_concurrency(sema, *coro)
     
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
