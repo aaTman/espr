@@ -101,6 +101,7 @@ async def dl(fnames, selection_dict, final_path):
                 output_file = f"{fnames[0].split('/')[-1].split('.')[-2][:-4]}"
                 if os.path.exists(f"{final_path}/{output_file}_std.nc"):
                     logging.warning(f"{output_file} already processed, skipping")
+                    pass
                 else:
                     try:
                         filename = s3_file.split('/')[-1]
