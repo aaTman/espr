@@ -98,25 +98,28 @@ async def dl(fnames, selection_dict, final_path):
     async with aiofiles.tempfile.TemporaryDirectory() as fpath:
         async with aioboto3.resource('s3',config=config) as s3:
             for s3_file in fnames:
-                try:
-                    filename = s3_file.split('/')[-1]
-                    await s3.meta.client.download_file(bucket, s3_file, f"{fpath}/{filename}")
-                    print(f'{s3_file} read success!')
-                except FileNotFoundError as e:
-                    logging.warning(f"{filename} not downloaded, not found")
-                    print(e)
-                    pass
-                except aiobotocore.response.AioReadTimeoutError as e:
-                    logging.warning(f"{filename} not downloaded, timeout")
-                    print(e)
-                    pass
-        combine(fpath, fnames, selection_dict, final_path)
+                output_file = f"{fnames[0].split('/')[-1].split('.')[-2][:-4]}"
+                if os.path.exists(f"{final_path}/{output_file}_std.nc"):
+                    logging.warning(f"{output_file} already processed, skipping")
+                else:
+                    try:
+                        filename = s3_file.split('/')[-1]
+                        await s3.meta.client.download_file(bucket, s3_file, f"{fpath}/{filename}")
+                        print(f'{s3_file} read success!')
+                    except FileNotFoundError as e:
+                        logging.warning(f"{filename} not downloaded, not found")
+                        print(e)
+                        pass
+                    except aiobotocore.response.AioReadTimeoutError as e:
+                        logging.warning(f"{filename} not downloaded, timeout")
+                        print(e)
+                        pass
+        combine(fpath, output_file, selection_dict, final_path)
         return f"{s3_file} downloaded, data written, combined"
     
-def combine(fpath, fnames, selection_dict, final_path):
+def combine(fpath, output_file, selection_dict, final_path):
     if warning(fpath) < 5:
-        logging.warning(f"{fnames} mean will be less than 5")
-    output_file = f"{fnames[0].split('/')[-1].split('.')[-2][:-4]}"
+        logging.warning(f"{output_file} mean will be less than 5")
     print(f"{output_file}")
     try:
         ds = xr.open_mfdataset(f"{fpath}/*.grib2",engine='cfgrib',
