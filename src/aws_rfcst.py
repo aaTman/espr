@@ -61,8 +61,8 @@ def create_selection_dict(
     )
     return selection_dict
 
-def warning(fpath,filetype='.gr'):
-    return len([n for n in os.listdir() if filetype in n])
+def len_warning(fpath,filetype='.gr'):
+    return len([n for n in os.listdir(fpath) if filetype in n])
 
 
 def date_range_seasonal(season, date_range=None):
@@ -129,7 +129,7 @@ async def dl(fnames, selection_dict, final_path):
     
 def combine(fpath, output_file, selection_dict, final_path):
 
-    if warning(fpath) < 5:
+    if len_warning(fpath) < 5:
         logging.warning(f"{output_file} mean will be less than 5")
     print(f"{output_file}")
     try:
