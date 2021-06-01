@@ -170,7 +170,10 @@ def combine(fpath, output_file, selection_dict, final_path):
             import pdb; pdb.set_trace()
             logging.error(f"{output_file} not created due to dataset build error")
             pass
-
+        except KeyError as e:
+            import pdb; pdb.set_trace()
+            logging.error(f"{output_file} not created due to KeyError")
+            pass
 
 @click.command()
 @click.option(
