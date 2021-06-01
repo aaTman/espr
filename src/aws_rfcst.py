@@ -140,9 +140,6 @@ def combine(fpath, output_file, selection_dict, final_path):
         ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",compute=False)
     except KeyError as e:
         logging.error(e)
-        
-    
-
 
 @click.command()
 @click.option(
