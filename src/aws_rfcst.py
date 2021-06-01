@@ -129,13 +129,15 @@ def combine(fpath, fnames, selection_dict, final_path):
                             'filter_by_keys': {'dataType': 'cf'},
                             'errors': 'ignore'
                         })
+        ds = ds.sel(selection_dict)
+        ds_mean = ds.mean('member')
+        ds_std = ds.std('member')
+        ds_mean.to_netcdf(f"{final_path}/{output_file}_mean.nc", compute=False)
+        ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",compute=False)
     except KeyError as e:
         logging.error(e)
-    ds = ds.sel(selection_dict)
-    ds_mean = ds.mean('member')
-    ds_std = ds.std('member')
-    ds_mean.to_netcdf(f"{final_path}/{output_file}_mean.nc", compute=False)
-    ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",compute=False)
+        
+    
 
 
 @click.command()
