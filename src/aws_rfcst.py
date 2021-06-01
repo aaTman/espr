@@ -82,6 +82,14 @@ def date_range_seasonal(season, date_range=None):
                    ]
     return dr
 
+async def gather_with_concurrency(n, *tasks):
+    semaphore = asyncio.Semaphore(n)
+
+    async def sem_task(task):
+        async with semaphore:
+            return await task
+    return await asyncio.gather(*(sem_task(task) for task in tasks))
+
 async def dl(fnames, selection_dict, final_path):
 
     bucket = 'noaa-gefs-retrospective'
@@ -198,7 +206,7 @@ async def download_process_reforecast(
     files_list = [n for n in s3_list_gen]
     coro = [dl(files, selection_dict, final_path) for files in files_list]
     
-    await asyncio.gather(*coro)
+    await gather_with_concurrency(10, *coro)
     
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
