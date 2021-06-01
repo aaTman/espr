@@ -93,9 +93,9 @@ async def gather_with_concurrency(n, *tasks):
 def file_check(final_path, output_file):
     if os.path.exists(f"{final_path}/{output_file}_std.nc"):
         logging.warning(f"{output_file} already processed, skipping")
-        return False
-    else:
         return True
+    else:
+        return False
 
 async def dl(fnames, selection_dict, final_path):
 
@@ -122,9 +122,9 @@ async def dl(fnames, selection_dict, final_path):
                         print(e)
                         pass
             if file_check(final_path, output_file):
-                combine(fpath, output_file, selection_dict, final_path)
-            else:
                 pass
+            else:
+                combine(fpath, output_file, selection_dict, final_path)
         return f"{s3_file} downloaded, data written, combined"
     
 def combine(fpath, output_file, selection_dict, final_path):
