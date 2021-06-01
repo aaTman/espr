@@ -93,9 +93,9 @@ async def gather_with_concurrency(n, *tasks):
 def file_check(final_path, output_file):
     if os.path.exists(f"{final_path}/{output_file}_std.nc"):
         logging.warning(f"{output_file} already processed, skipping")
-        return True
-    else:
         return False
+    else:
+        return True
 
 async def dl(fnames, selection_dict, final_path):
 
