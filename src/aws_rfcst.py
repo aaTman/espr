@@ -8,7 +8,6 @@ import os
 import re
 from datetime import datetime, timedelta
 import numpy as np
-import s3fs
 import asyncio
 import aiobotocore
 import aiofiles
@@ -20,6 +19,7 @@ import aioboto3
 from botocore.client import Config
 import asyncclick as click
 import logging
+import cfgrib
 
 logging.basicConfig(filename='output.log', level=logging.WARNING)
 
@@ -150,6 +150,32 @@ def combine(fpath, output_file, selection_dict, final_path):
         ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",compute=False)
     except KeyError as e:
         logging.error(e)
+        pass
+    except cfgrib.dataset.DatasetBuildError as e:
+        logging.error(e)
+        logging.error(f'files: {os.listdir(fpath)}')
+        try:
+            ds = xr.open_mfdataset(f"{fpath}/*.grib2",engine='cfgrib',
+                        combine='nested',
+                        concat_dim='member',
+                        
+                        coords='minimal',
+                        compat='override',
+                        backend_kwargs={
+                    'filter_by_keys': {'totalNumber': 20,
+                                        'dataType': 'cf'},
+                    'errors': 'ignore'
+                })
+            ds = ds.sel(selection_dict)
+            ds_mean = ds.mean('member')
+            ds_std = ds.std('member')
+            ds_mean.to_netcdf(f"{final_path}/{output_file}_mean.nc", compute=False)
+            ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",compute=False)
+            logging.warning('used backup successfully with totalNumber filter in xarray.load_mfdataset')
+        except cfgrib.dataset.DatasetBuildError as e:
+            logging.error(f"{output_file} not created due to dataset build error")
+            pass
+
 
 @click.command()
 @click.option(
