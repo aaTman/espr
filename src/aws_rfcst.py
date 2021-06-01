@@ -167,6 +167,7 @@ def combine(fpath, output_file, selection_dict, final_path):
             ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",compute=False)
             logging.warning('used backup successfully with totalNumber filter in xarray.load_mfdataset')
         except cfgrib.dataset.DatasetBuildError as e:
+            import pdb; pdb.set_trace()
             logging.error(f"{output_file} not created due to dataset build error")
             pass
 
