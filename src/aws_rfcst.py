@@ -13,8 +13,6 @@ import aiobotocore
 import aiofiles
 import time
 import tempfile
-from contextlib import closing
-from botocore import UNSIGNED
 import aioboto3
 from botocore.client import Config
 import asyncclick as click
