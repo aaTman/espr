@@ -91,6 +91,8 @@ def file_check(final_path, output_file):
     else:
         return False
 
+# def preprocess_datatype(ds):
+
 async def dl(fnames, selection_dict, final_path):
 
     bucket = 'noaa-gefs-retrospective'
@@ -130,7 +132,6 @@ def combine(fpath, output_file, selection_dict, final_path):
         ds = xr.open_mfdataset(f"{fpath}/*.grib2",engine='cfgrib',
                                 combine='nested',
                                 concat_dim='member',
-                                
                                 coords='minimal',
                                 compat='override',
                                 backend_kwargs={
@@ -152,7 +153,6 @@ def combine(fpath, output_file, selection_dict, final_path):
             ds = xr.open_mfdataset(f"{fpath}/*.grib2",engine='cfgrib',
                         combine='nested',
                         concat_dim='member',
-                        
                         coords='minimal',
                         compat='override',
                         backend_kwargs={
