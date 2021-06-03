@@ -14,6 +14,7 @@ from botocore.client import Config
 import asyncclick as click
 import logging
 import cfgrib
+import glob
 
 logging.basicConfig(filename='output.log', level=logging.WARNING)
 
@@ -143,10 +144,11 @@ def combine(fpath, output_file, selection_dict, final_path):
         ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",compute=False)
     except KeyError as e:
         logging.error(e)
+        logging.error(f'files: {os.listdir(fpath)}')
         pass
     except cfgrib.dataset.DatasetBuildError as e:
         logging.error(e)
-        logging.error(f'files: {os.listdir(fpath)}')
+        logging.error(f'files: {os.listdir(fpath)}, attempting pf instead of cf')
         try:
             ds = xr.open_mfdataset(f"{fpath}/*.grib2",engine='cfgrib',
                         combine='nested',
@@ -154,8 +156,7 @@ def combine(fpath, output_file, selection_dict, final_path):
                         coords='minimal',
                         compat='override',
                         backend_kwargs={
-                    'filter_by_keys': {'totalNumber': 10,
-                                        'dataType': 'cf'},
+                    'filter_by_keys': {'dataType': 'pf'},
                     'errors': 'ignore'
                 })
             ds = ds.sel(selection_dict)
@@ -165,13 +166,41 @@ def combine(fpath, output_file, selection_dict, final_path):
             ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",compute=False)
             logging.warning('used backup successfully with totalNumber filter in xarray.load_mfdataset')
         except cfgrib.dataset.DatasetBuildError as e:
-            import pdb; pdb.set_trace()
             logging.error(f"{output_file} not created due to dataset build error")
             pass
         except KeyError as e:
-            import pdb; pdb.set_trace()
             logging.error(f"{output_file} not created due to KeyError")
             pass
+
+def create_mclimate(final_path, wx_var, season, rm):
+    final_file_mean = f"{final_path}/{wx_var}_mean_{season}.nc"
+    final_file_std = f"{final_path}/{wx_var}_std_{season}.nc"
+    ds = xr.open_mfdataset(f"{final_path}/{wx_var}/*.nc",
+                            combine='nested',
+                            concat_dim='member',
+                            coords='minimal',
+                            compat='override'
+                            )
+    ds_mean = ds.mean('member')
+    ds_std = ds.std('member') 
+    ds_mean.to_netcdf(final_file_mean)
+    ds_std.to_netcdf(final_file_std)       
+    logging.info(f"{wx_var} mean and spread for {season} generated.")
+    print(f"{wx_var} mean and spread for {season} generated.")
+    if rm:
+        rm_files(final_path, wx_var)
+
+
+def rm_files(final_path, wx_var):
+    files = glob.glob(f"{final_path}/{wx_var}_20*")
+    logging.info(f"removing downloaded files for {wx_var}")
+    for fp in files:
+        try:
+            os.remove(fp)
+        except:
+            logging.info(f"{fp} not removed, error")
+            pass
+
 
 @click.command()
 @click.option(
@@ -225,6 +254,11 @@ def combine(fpath, output_file, selection_dict, final_path):
     default=10,
     help="Number of tasks to run in async at once before worker denials."
 )
+@click.option(
+    '-rm',
+    default='n',
+    help="Whether to delete downloaded files after combination into mclimate file (y or n, default n)"
+)
 async def download_process_reforecast(
     var_names,
     pressure_levels,
@@ -233,7 +267,8 @@ async def download_process_reforecast(
     forecast_days,
     season,
     final_path,
-    semaphore):
+    semaphore,
+    rm):
     source = 'https://noaa-gefs-retrospective.s3.amazonaws.com/GEFSv12/reforecast/'
     bucket = 'noaa-gefs-retrospective/GEFSv12/reforecast'
     ens = ['c00','p01','p02','p03','p04']
@@ -251,7 +286,12 @@ async def download_process_reforecast(
     coro = [dl(files, selection_dict, final_path) for files in files_list]
     
     await gather_with_concurrency(semaphore, *coro)
-    
+    if rm == 'y':
+        rm = True
+    else:
+        rm = False
+    [create_mclimate(final_path, wx_var, rm) for wx_var in var_names]
+
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(download_process_reforecast())
