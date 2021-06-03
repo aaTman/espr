@@ -175,7 +175,7 @@ def combine(fpath, output_file, selection_dict, final_path):
 def create_mclimate(final_path, wx_var, season, rm):
     final_file_mean = f"{final_path}/{wx_var}_mean_{season}.nc"
     final_file_std = f"{final_path}/{wx_var}_std_{season}.nc"
-    ds = xr.open_mfdataset(f"{final_path}/{wx_var}/*.nc",
+    ds = xr.open_mfdataset(f"{final_path}/{wx_var}*.nc",
                             combine='nested',
                             concat_dim='member',
                             coords='minimal',
