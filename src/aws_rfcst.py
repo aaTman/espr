@@ -91,8 +91,6 @@ def file_check(final_path, output_file):
     else:
         return False
 
-# def preprocess_datatype(ds):
-
 async def dl(fnames, selection_dict, final_path):
 
     bucket = 'noaa-gefs-retrospective'
@@ -156,7 +154,7 @@ def combine(fpath, output_file, selection_dict, final_path):
                         coords='minimal',
                         compat='override',
                         backend_kwargs={
-                    'filter_by_keys': {'totalNumber': 20,
+                    'filter_by_keys': {'totalNumber': 10,
                                         'dataType': 'cf'},
                     'errors': 'ignore'
                 })
@@ -179,7 +177,7 @@ def combine(fpath, output_file, selection_dict, final_path):
 @click.option(
     "-v",
     "--var-names",
-    default=["dswrf_sfc", "tcdc_eatm", "apcp_sfc"],
+    default=["dswrf_sfc", "tcdc_eatm"],
     help="Gridded fields to download.",
     multiple=True,
 )
