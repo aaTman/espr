@@ -290,7 +290,7 @@ async def download_process_reforecast(
         rm = True
     else:
         rm = False
-    [create_mclimate(final_path, wx_var, rm) for wx_var in var_names]
+    [create_mclimate(final_path, wx_var, season, rm) for wx_var in var_names]
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
