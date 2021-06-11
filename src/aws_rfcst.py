@@ -259,6 +259,18 @@ def rm_files(final_path, wx_var):
     default='n',
     help="Whether to delete downloaded files after combination into mclimate file (y or n, default n)"
 )
+@click.option(
+    '-stats',
+    default='n',
+    help="Whether to run stats (stats summary saves to final-path, y or n, default n)"
+)
+
+def str_to_bool(s):
+    if s in ['y','yes','ye']:
+        return True
+    else:
+        return False
+
 async def download_process_reforecast(
     var_names,
     pressure_levels,
@@ -268,7 +280,8 @@ async def download_process_reforecast(
     season,
     final_path,
     semaphore,
-    rm):
+    rm,
+    stats):
     source = 'https://noaa-gefs-retrospective.s3.amazonaws.com/GEFSv12/reforecast/'
     bucket = 'noaa-gefs-retrospective/GEFSv12/reforecast'
     ens = ['c00','p01','p02','p03','p04']
@@ -280,17 +293,13 @@ async def download_process_reforecast(
     for wx_var in var_names 
     for n in dr 
     for m in ens]
-
     s3_list_gen = (s3_list[i:i+5] for i in range(0, len(s3_list), 5))
     files_list = [n for n in s3_list_gen]
     coro = [dl(files, selection_dict, final_path) for files in files_list]
-    
     await gather_with_concurrency(semaphore, *coro)
-    if rm == 'y':
-        rm = True
-    else:
-        rm = False
-    [create_mclimate(final_path, wx_var, season, rm) for wx_var in var_names]
+    rm = str_to_bool(rm)
+    stats = str_to_bool(stats)
+    [create_mclimate(final_path, wx_var, season, rm, stats) for wx_var in var_names]
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
