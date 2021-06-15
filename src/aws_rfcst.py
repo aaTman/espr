@@ -15,6 +15,7 @@ import asyncclick as click
 import logging
 import cfgrib
 import glob
+import spread_skill
 
 logging.basicConfig(filename='output.log', level=logging.WARNING)
 
@@ -172,7 +173,7 @@ def combine(fpath, output_file, selection_dict, final_path):
             logging.error(f"{output_file} not created due to KeyError")
             pass
 
-def create_mclimate(final_path, wx_var, season, rm):
+def create_mclimate(final_path, wx_var, season, rm, stats):
     final_file_mean = f"{final_path}/{wx_var}_mean_{season}.nc"
     final_file_std = f"{final_path}/{wx_var}_std_{season}.nc"
     ds = xr.open_mfdataset(f"{final_path}/{wx_var}*.nc",
@@ -181,6 +182,13 @@ def create_mclimate(final_path, wx_var, season, rm):
                             coords='minimal',
                             compat='override'
                             )
+    if stats:
+        stats_dict = {
+            'range':True,
+            'verif_solution_space':True,
+            
+        }
+        spread_skill.init_stats(ds,stats_dict,final_path)
     ds_mean = ds.mean('member')
     ds_std = ds.std('member') 
     ds_mean.to_netcdf(final_file_mean)

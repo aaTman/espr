@@ -1,4 +1,6 @@
 import xarray as xr
 
-def range_checker():
+class stat:
+    def __init__(ds,stats_dict,path):
+        self.ds = ds
     
