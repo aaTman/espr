@@ -200,6 +200,12 @@ def create_mclimate(final_path, wx_var, season, rm, stats):
         rm_files(final_path, wx_var)
 
 
+def str_to_bool(s):
+    if s in ['y','yes','ye']:
+        return True
+    else:
+        return False
+
 def rm_files(final_path, wx_var):
     files = glob.glob(f"{final_path}/{wx_var}_20*")
     logging.info(f"removing downloaded files for {wx_var}")
@@ -273,13 +279,6 @@ def rm_files(final_path, wx_var):
     default='n',
     help="Whether to run stats (stats summary saves to final-path, y or n, default n)"
 )
-
-def str_to_bool(s):
-    if s in ['y','yes','ye']:
-        return True
-    else:
-        return False
-
 async def download_process_reforecast(
     var_names,
     pressure_levels,
