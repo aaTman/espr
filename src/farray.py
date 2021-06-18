@@ -10,7 +10,7 @@ import plot
 import subprocess
 import logging
 
-class NewForecastArray:
+class ForecastArray:
     """
     Forecast grib/netcdf object.
     This class instantiates metadata and loads data

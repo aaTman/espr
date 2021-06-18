@@ -141,6 +141,7 @@ def combine(fpath, output_file, selection_dict, final_path):
         ds = ds.sel(selection_dict)
         ds_mean = ds.mean('member')
         ds_std = ds.std('member')
+        import pdb; pdb.set_trace()
         ds_mean.to_netcdf(f"{final_path}/{output_file}_mean.nc", compute=False)
         ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",compute=False)
     except KeyError as e:
@@ -186,13 +187,13 @@ def create_mclimate(final_path, wx_var, season, rm, stats):
         stats_dict = {
             'range':True,
             'verif_solution_space':True,
-            
+
         }
         spread_skill.init_stats(ds,stats_dict,final_path)
     ds_mean = ds.mean('member')
     ds_std = ds.std('member') 
     ds_mean.to_netcdf(final_file_mean)
-    ds_std.to_netcdf(final_file_std)       
+    ds_std.to_netcdf(final_file_std)
     logging.info(f"{wx_var} mean and spread for {season} generated.")
     print(f"{wx_var} mean and spread for {season} generated.")
     if rm:
