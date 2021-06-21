@@ -99,14 +99,14 @@ def combine(fpath, output_file, selection_dict, final_path):
         engine='cfgrib',
         backend_kwargs={
             'filter_by_keys':{'dataType':'cf'},
-            'extra_coords':{"lengthOfTimeRange":"6"}
+            'extra_coords':{"stepRange":"step"}
             },
             chunks={'number':1,'step':10}).sel(number=0).isel(step=slice(1,None,2))   
         pf = xr.open_dataset(f'{fpath}/{output_file}.grib2',
         engine='cfgrib',
         backend_kwargs={
             'filter_by_keys':{'dataType':'pf'},
-            'extra_coords':{"lengthOfTimeRange":"6"}
+            'extra_coords':{"stepRange":"step"}
             },
             chunks={'number':1,'step':10}).isel(step=slice(1,None,2))     
         import pdb; pdb.set_trace()
