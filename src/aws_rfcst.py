@@ -1,21 +1,23 @@
 # pyright: reportMissingImports=false, reportMissingModuleSource=false
-
-import pandas as pd
-import xarray as xr 
+import subprocess
+import glob
 import os
-from datetime import datetime, timedelta
-import asyncio
-import aiobotocore
-import aiofiles
 import time
 import tempfile
+import logging
+from datetime import timedelta
+import asyncio
+import pandas as pd
+import xarray as xr 
+import aiobotocore
+import aiofiles
 import aioboto3
 from botocore.client import Config
 import asyncclick as click
-import logging
+import pygrib
 import cfgrib
-import glob
 import spread_skill
+
 
 logging.basicConfig(filename='output.log', level=logging.WARNING)
 
@@ -60,7 +62,6 @@ def create_selection_dict(
 def len_warning(fpath,filetype='.gr'):
     return len([n for n in os.listdir(fpath) if filetype in n])
 
-
 def date_range_seasonal(season, date_range=None):
     if date_range is not None:
         pass
@@ -78,14 +79,6 @@ def date_range_seasonal(season, date_range=None):
                    ]
     return dr
 
-async def gather_with_concurrency(n, *tasks):
-    semaphore = asyncio.Semaphore(n)
-
-    async def sem_task(task):
-        async with semaphore:
-            return await task
-    return await asyncio.gather(*(sem_task(task) for task in tasks))
-
 def file_check(final_path, output_file):
     if os.path.exists(f"{final_path}/{output_file}_std.nc"):
         logging.warning(f"{output_file} already processed, skipping")
@@ -93,36 +86,6 @@ def file_check(final_path, output_file):
     else:
         return False
 
-async def dl(fnames, selection_dict, final_path):
-
-    bucket = 'noaa-gefs-retrospective'
-    filenames = [n.split('/')[-1] for n in fnames]
-    fpaths = ['/'.join(n.split('/')[0:-1]) for n in fnames]
-    async with aiofiles.tempfile.TemporaryDirectory() as fpath:
-        async with aioboto3.resource('s3',config=config) as s3:
-            for s3_file in fnames:
-                output_file = f"{fnames[0].split('/')[-1].split('.')[-2][:-4]}"
-                if file_check(final_path, output_file):
-                    pass
-                else:
-                    try:
-                        filename = s3_file.split('/')[-1]
-                        await s3.meta.client.download_file(bucket, s3_file, f"{fpath}/{filename}")
-                        print(f'{s3_file} read success!')
-                    except FileNotFoundError as e:
-                        logging.warning(f"{filename} not downloaded, not found")
-                        print(e)
-                        pass
-                    except aiobotocore.response.AioReadTimeoutError as e:
-                        logging.warning(f"{filename} not downloaded, timeout")
-                        print(e)
-                        pass
-            if file_check(final_path, output_file):
-                pass
-            else:
-                combine(fpath, output_file, selection_dict, final_path)
-        return f"{s3_file} downloaded, data written, combined"
-    
 def combine(fpath, output_file, selection_dict, final_path):
 
     if len_warning(fpath) < 5:
@@ -130,6 +93,11 @@ def combine(fpath, output_file, selection_dict, final_path):
     print(f"{output_file}")
     import pdb; pdb.set_trace()
     try:
+        subprocess.run(['cat', '*.grib2', f"{output_file}.grib2"])
+        ensemble = pygrib.open(f'{output_file}.grib2')
+        # replace this with cat *.grib2 > {output_file}.grib2
+        # pygrib.open({output_file}.grib2)
+        # pygrib.select('lengthOfTimeRange=3')
         ds = xr.open_mfdataset(f"{fpath}/*.grib2",engine='cfgrib',
                                 combine='nested',
                                 concat_dim='member',
@@ -217,6 +185,43 @@ def rm_files(final_path, wx_var):
             logging.info(f"{fp} not removed, error")
             pass
 
+async def gather_with_concurrency(n, *tasks):
+    semaphore = asyncio.Semaphore(n)
+
+    async def sem_task(task):
+        async with semaphore:
+            return await task
+    return await asyncio.gather(*(sem_task(task) for task in tasks))
+
+async def dl(fnames, selection_dict, final_path):
+
+    bucket = 'noaa-gefs-retrospective'
+    filenames = [n.split('/')[-1] for n in fnames]
+    fpaths = ['/'.join(n.split('/')[0:-1]) for n in fnames]
+    async with aiofiles.tempfile.TemporaryDirectory() as fpath:
+        async with aioboto3.resource('s3',config=config) as s3:
+            for s3_file in fnames:
+                output_file = f"{fnames[0].split('/')[-1].split('.')[-2][:-4]}"
+                if file_check(final_path, output_file):
+                    pass
+                else:
+                    try:
+                        filename = s3_file.split('/')[-1]
+                        await s3.meta.client.download_file(bucket, s3_file, f"{fpath}/{filename}")
+                        print(f'{s3_file} read success!')
+                    except FileNotFoundError as e:
+                        logging.warning(f"{filename} not downloaded, not found")
+                        print(e)
+                        pass
+                    except aiobotocore.response.AioReadTimeoutError as e:
+                        logging.warning(f"{filename} not downloaded, timeout")
+                        print(e)
+                        pass
+            if file_check(final_path, output_file):
+                pass
+            else:
+                combine(fpath, output_file, selection_dict, final_path)
+        return f"{s3_file} downloaded, data written, combined"
 
 @click.command()
 @click.option(
