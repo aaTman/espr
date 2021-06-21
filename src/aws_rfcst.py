@@ -91,13 +91,13 @@ def combine(fpath, output_file, selection_dict, final_path):
     if len_warning(fpath) < 5:
         logging.warning(f"{output_file} mean will be less than 5")
     print(f"{output_file}")
-    import pdb; pdb.set_trace()
     try:
         subprocess.run(['cat', '*.grib2', f"{output_file}.grib2"])
         ensemble = pygrib.open(f'{output_file}.grib2')
         # replace this with cat *.grib2 > {output_file}.grib2
         # pygrib.open({output_file}.grib2)
-        # pygrib.select('lengthOfTimeRange=3')
+        ensemble_6hr = ensemble.select(lengthOfTimeRange=6)
+        import pdb; pdb.set_trace()
         ds = xr.open_mfdataset(f"{fpath}/*.grib2",engine='cfgrib',
                                 combine='nested',
                                 concat_dim='member',
