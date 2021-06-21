@@ -93,11 +93,12 @@ def combine(fpath, output_file, selection_dict, final_path):
     print(f"{output_file}")
     try:
         subprocess.run(['cat', '*.grib2', f"{output_file}.grib2"])
+        import pdb; pdb.set_trace()
         ensemble = pygrib.open(f'{output_file}.grib2')
         # replace this with cat *.grib2 > {output_file}.grib2
         # pygrib.open({output_file}.grib2)
         ensemble_6hr = ensemble.select(lengthOfTimeRange=6)
-        import pdb; pdb.set_trace()
+        
         ds = xr.open_mfdataset(f"{fpath}/*.grib2",engine='cfgrib',
                                 combine='nested',
                                 concat_dim='member',
