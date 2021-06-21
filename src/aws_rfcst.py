@@ -92,7 +92,8 @@ def combine(fpath, output_file, selection_dict, final_path):
         logging.warning(f"{output_file} mean will be less than 5")
     print(f"{output_file}")
     try:
-        subprocess.run(['cat']+ glob.glob(fpath+'/*.grib2'), stdout=f"{fpath}/{output_file}.grib2")
+        with open(f"{fpath}/{output_file}.grib2", 'w') as outfile:
+            subprocess.run(['cat']+ glob.glob(fpath+'/*.grib2'), stdout=outfile)
         import pdb; pdb.set_trace()
         ensemble = pygrib.open(f'{output_file}.grib2')
         # replace this with cat *.grib2 > {output_file}.grib2
