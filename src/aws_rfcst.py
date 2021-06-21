@@ -128,6 +128,7 @@ def combine(fpath, output_file, selection_dict, final_path):
     if len_warning(fpath) < 5:
         logging.warning(f"{output_file} mean will be less than 5")
     print(f"{output_file}")
+    import pdb; pdb.set_trace()
     try:
         ds = xr.open_mfdataset(f"{fpath}/*.grib2",engine='cfgrib',
                                 combine='nested',
@@ -141,7 +142,7 @@ def combine(fpath, output_file, selection_dict, final_path):
         ds = ds.sel(selection_dict)
         ds_mean = ds.mean('member')
         ds_std = ds.std('member')
-        import pdb; pdb.set_trace()
+        
         ds_mean.to_netcdf(f"{final_path}/{output_file}_mean.nc", compute=False)
         ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",compute=False)
     except KeyError as e:
