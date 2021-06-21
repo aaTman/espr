@@ -94,21 +94,23 @@ def combine(fpath, output_file, selection_dict, final_path):
     try:
         with open(f"{fpath}/{output_file}.grib2", 'w') as outfile:
             subprocess.run(['cat']+ glob.glob(fpath+'/*.grib2'), stdout=outfile)
+        ensemble = pygrib.open(f'{fpath}/{output_file}.grib2')
+        cf = xr.open_dataset(f'{fpath}/{output_file}.grib2',
+        engine='cfgrib',
+        backend_kwargs={
+            'filter_by_keys':{'dataType':'cf'},
+            'extra_coords':{"lengthOfTimeRange":"6"}
+            },
+            chunks={'number':1,'step':10}).sel(number=0).isel(step=slice(1,None,2))   
+        pf = xr.open_dataset(f'{fpath}/{output_file}.grib2',
+        engine='cfgrib',
+        backend_kwargs={
+            'filter_by_keys':{'dataType':'pf'},
+            'extra_coords':{"lengthOfTimeRange":"6"}
+            },
+            chunks={'number':1,'step':10}).isel(step=slice(1,None,2))     
         import pdb; pdb.set_trace()
-        ensemble = pygrib.open(f'{output_file}.grib2')
-        # replace this with cat *.grib2 > {output_file}.grib2
-        # pygrib.open({output_file}.grib2)
-        ensemble_6hr = ensemble.select(lengthOfTimeRange=6)
-        
-        ds = xr.open_mfdataset(f"{fpath}/*.grib2",engine='cfgrib',
-                                combine='nested',
-                                concat_dim='member',
-                                coords='minimal',
-                                compat='override',
-                                backend_kwargs={
-                            'filter_by_keys': {'dataType': 'cf'},
-                            'errors': 'ignore'
-                        })
+        ds = xr.concat([cf,pf],'number')
         ds = ds.sel(selection_dict)
         ds_mean = ds.mean('member')
         ds_std = ds.std('member')
