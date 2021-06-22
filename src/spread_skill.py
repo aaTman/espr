@@ -12,4 +12,6 @@ def time_valid_errors(x, x_obs):
 class stat:
     def __init__(ds,stats_dict,path):
         self.ds = ds
+        self.stats_dict = stats_dict
+        
     

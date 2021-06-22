@@ -86,66 +86,53 @@ def file_check(final_path, output_file):
     else:
         return False
 
-def combine(fpath, output_file, selection_dict, final_path):
+def combine(fpath, output_file, selection_dict, final_path, stats):
 
     if len_warning(fpath) < 5:
         logging.warning(f"{output_file} mean will be less than 5")
     print(f"{output_file}")
-    try:
-        with open(f"{fpath}/{output_file}.grib2", 'w') as outfile:
-            subprocess.run(['cat']+ glob.glob(fpath+'/*.grib2'), stdout=outfile)
-        ensemble = pygrib.open(f'{fpath}/{output_file}.grib2')
-        cf = xr.open_dataset(f'{fpath}/{output_file}.grib2',
-        engine='cfgrib',
-        backend_kwargs={
-            'filter_by_keys':{'dataType':'cf'},
-            'extra_coords':{"stepRange":"step"}
-            },
-            chunks={'number':1,'step':10}).sel(number=0).isel(step=slice(1,None,2))   
-        pf = xr.open_dataset(f'{fpath}/{output_file}.grib2',
-        engine='cfgrib',
-        backend_kwargs={
-            'filter_by_keys':{'dataType':'pf'},
-            'extra_coords':{"stepRange":"step"}
-            },
-            chunks={'number':1,'step':10}).isel(step=slice(1,None,2))     
-        import pdb; pdb.set_trace()
-        ds = xr.concat([cf,pf],'number')
-        ds = ds.sel(selection_dict)
-        ds_mean = ds.mean('member')
-        ds_std = ds.std('member')
-        
-        ds_mean.to_netcdf(f"{final_path}/{output_file}_mean.nc", compute=False)
-        ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",compute=False)
-    except KeyError as e:
-        logging.error(e)
-        logging.error(f'files: {os.listdir(fpath)}')
-        pass
-    except cfgrib.dataset.DatasetBuildError as e:
-        logging.error(e)
-        logging.error(f'files: {os.listdir(fpath)}, attempting pf instead of cf')
-        try:
-            ds = xr.open_mfdataset(f"{fpath}/*.grib2",engine='cfgrib',
-                        combine='nested',
-                        concat_dim='member',
-                        coords='minimal',
-                        compat='override',
-                        backend_kwargs={
-                    'filter_by_keys': {'dataType': 'pf'},
-                    'errors': 'ignore'
-                })
-            ds = ds.sel(selection_dict)
-            ds_mean = ds.mean('member')
-            ds_std = ds.std('member')
-            ds_mean.to_netcdf(f"{final_path}/{output_file}_mean.nc", compute=False)
-            ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",compute=False)
-            logging.warning('used backup successfully with totalNumber filter in xarray.load_mfdataset')
-        except cfgrib.dataset.DatasetBuildError as e:
-            logging.error(f"{output_file} not created due to dataset build error")
-            pass
-        except KeyError as e:
-            logging.error(f"{output_file} not created due to KeyError")
-            pass
+    with open(f"{fpath}/{output_file}.grib2", 'w') as outfile:
+        subprocess.run(['cat']+ glob.glob(fpath+'/*.grib2'), stdout=outfile)
+    ensemble = pygrib.open(f'{fpath}/{output_file}.grib2')
+    cf = xr.open_dataset(f'{fpath}/{output_file}.grib2',
+    engine='cfgrib',
+    backend_kwargs={
+        'filter_by_keys':{'dataType':'cf'},
+        'extra_coords':{"stepRange":"step"}
+        },
+        chunks={'number':1,'step':10}).sel(number=0).isel(step=slice(1,None,2))   
+    pf = xr.open_dataset(f'{fpath}/{output_file}.grib2',
+    engine='cfgrib',
+    backend_kwargs={
+        'filter_by_keys':{'dataType':'pf'},
+        'extra_coords':{"stepRange":"step"}
+        },
+        chunks={'number':1,'step':10}).isel(step=slice(1,None,2))     
+    import pdb; pdb.set_trace()
+    ds = xr.concat([cf,pf],'number')
+    ds = ds.sel(selection_dict)
+    ds_mean = ds.mean('number')
+    ds_std = ds.std('number')
+    if stats:
+        stats_dict = {
+            'range':True,
+            'bs':False,
+            'crps':False
+        }
+        spread_skill.init_stats(ds,stats_dict,final_path)
+    else:
+        pass        
+    ds_mean.to_netcdf(f"{final_path}/{output_file}_mean.nc", compute=False)
+    ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",compute=False)
+    # except cfgrib.dataset.DatasetBuildError as e:
+    #     logging.error(f"{output_file} not created due to dataset build error")
+    #     pass
+    # except KeyError as e:
+    #     logging.error(f"{output_file} not created due to KeyError")
+    #     pass
+    # except Error as e:
+    #     logging.error(f"{output_file} not created due to {e}")
+    #     pass
 
 def create_mclimate(final_path, wx_var, season, rm, stats):
     final_file_mean = f"{final_path}/{wx_var}_mean_{season}.nc"
@@ -156,13 +143,6 @@ def create_mclimate(final_path, wx_var, season, rm, stats):
                             coords='minimal',
                             compat='override'
                             )
-    if stats:
-        stats_dict = {
-            'range':True,
-            'verif_solution_space':True,
-
-        }
-        spread_skill.init_stats(ds,stats_dict,final_path)
     ds_mean = ds.mean('member')
     ds_std = ds.std('member') 
     ds_mean.to_netcdf(final_file_mean)
@@ -197,7 +177,7 @@ async def gather_with_concurrency(n, *tasks):
             return await task
     return await asyncio.gather(*(sem_task(task) for task in tasks))
 
-async def dl(fnames, selection_dict, final_path):
+async def dl(fnames, selection_dict, final_path, stats):
 
     bucket = 'noaa-gefs-retrospective'
     filenames = [n.split('/')[-1] for n in fnames]
@@ -224,7 +204,7 @@ async def dl(fnames, selection_dict, final_path):
             if file_check(final_path, output_file):
                 pass
             else:
-                combine(fpath, output_file, selection_dict, final_path)
+                combine(fpath, output_file, selection_dict, final_path, stats)
         return f"{s3_file} downloaded, data written, combined"
 
 @click.command()
@@ -313,11 +293,12 @@ async def download_process_reforecast(
     for m in ens]
     s3_list_gen = (s3_list[i:i+5] for i in range(0, len(s3_list), 5))
     files_list = [n for n in s3_list_gen]
-    coro = [dl(files, selection_dict, final_path) for files in files_list]
+    stats = str_to_bool(stats)
+    coro = [dl(files, selection_dict, final_path, stats) for files in files_list]
     await gather_with_concurrency(semaphore, *coro)
     rm = str_to_bool(rm)
-    stats = str_to_bool(stats)
-    [create_mclimate(final_path, wx_var, season, rm, stats) for wx_var in var_names]
+    
+    [create_mclimate(final_path, wx_var, season, rm) for wx_var in var_names]
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
