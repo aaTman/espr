@@ -119,7 +119,7 @@ def combine(fpath, output_file, selection_dict, final_path, stats):
             'bs':False,
             'crps':False
         }
-        spread_skill.init_stats(ds,stats_dict,final_path)
+        # spread_skill.init_stats(ds,stats_dict,final_path)
     else:
         pass        
     ds_mean.to_netcdf(f"{final_path}/{output_file}_mean.nc", compute=False)
