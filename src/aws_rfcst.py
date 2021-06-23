@@ -119,15 +119,6 @@ def combine(fpath, output_file, selection_dict, final_path, stats):
         pass        
     ds_mean.to_netcdf(f"{final_path}/{output_file}_mean.nc", compute=False)
     ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",compute=False)
-    # except cfgrib.dataset.DatasetBuildError as e:
-    #     logging.error(f"{output_file} not created due to dataset build error")
-    #     pass
-    # except KeyError as e:
-    #     logging.error(f"{output_file} not created due to KeyError")
-    #     pass
-    # except Error as e:
-    #     logging.error(f"{output_file} not created due to {e}")
-    #     pass
 
 def create_mclimate(final_path, wx_var, season, rm, stats):
     final_file_mean = f"{final_path}/{wx_var}_mean_{season}.nc"
