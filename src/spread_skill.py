@@ -12,9 +12,10 @@ def time_valid_errors(x, x_obs):
 class stats:
     def __init__(self, ds, path, default_obs=True):
         self.ds = ds
+        var_path = [n for n in ds.data_vars][0]
         self.path = path
         if default_obs:
-            self.set_obs_path('/home/taylorm/espr/analysis/dswrf_sfc_6hr.nc')
+            self.set_obs_path(f'/home/taylorm/espr/analysis/{var_path}.nc')
         self.swap_time_dim()
         self.swap_obs_time_dim()
         self.obs_subset()
