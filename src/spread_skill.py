@@ -12,14 +12,15 @@ def time_valid_errors(x, x_obs):
 class stats:
     def __init__(self, ds, path, default_obs=True):
         self.ds = ds
-        var_path = [n for n in ds.data_vars][0]
+        self.ds_var = [n for n in ds][0]
         self.path = path
         if default_obs:
-            self.set_obs_path(f'/home/taylorm/espr/analysis/{var_path}.nc')
+            self.set_obs_path(f'/home/taylorm/espr/analysis/{self.ds_var}.nc')
+            self.obs_var = [n for n in self.obs][0]
         self.swap_time_dim()
         self.swap_obs_time_dim()
         self.obs_subset()
-
+        
     def swap_time_dim(self,original_dim='step',new_dim='valid_time'):
         self.ds = self.ds.swap_dims({'step':'valid_time'})
 
@@ -41,6 +42,6 @@ class stats:
         return self.ds.max(dim=dim) - self.ds.min(dim=dim)
 
     def valid_sample_space(self,dim='number'):
-        return np.logical_and(self.obs<=self.ds.max(dim='number'),self.obs>=self.ds.min(dim='number'))
+        return np.logical_and(self.obs[self.obs_var]<=self.ds[self.ds_var].max(dim='number'),self.obs[self.obs_var]>=self.ds[self.ds_var].min(dim='number'))
 
     
