@@ -109,6 +109,8 @@ def combine(fpath, output_file, selection_dict, final_path, stats):
         },
         chunks={'number':1,'step':10}).isel(step=slice(1,None,2))     
     ds = xr.concat([cf,pf],'number')
+    if self.ds.step.shape[0] > 28:
+        import pdb; pdb.set_trace()
     ds = ds.sel(selection_dict)
     ds_mean = ds.mean('number')
     ds_std = ds.std('number')
