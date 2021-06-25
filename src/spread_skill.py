@@ -15,7 +15,7 @@ class stats:
         self.ds_var = [n for n in ds][0]
         self.path = path
         if default_obs:
-            self.set_obs_path(f'/home/taylorm/espr/analysis/{self.ds_var}.nc')
+            self.set_obs_path(f'/home/taylorm/espr/analysis')
             self.obs_var = [n for n in self.obs][0]
         self.swap_time_dim()
         self.swap_obs_time_dim()
@@ -31,9 +31,9 @@ class stats:
         self.obs_path = path
         if load:
             if dask:
-                self.obs = xr.open_dataset(self.obs_path,chunks='auto')
+                self.obs = xr.open_dataset(f'{self.obs_path}/{self.ds_var}.nc',chunks='auto')
             else:
-                self.obs = xr.open_dataset(self.obs_path)
+                self.obs = xr.open_dataset(f'{self.obs_path}/{self.ds_var}.nc')
 
     def obs_subset(self):
         if np.any(self.ds.longitude.values > 180):
@@ -46,10 +46,11 @@ class stats:
     def range(self,dim='number'):
         return self.ds.max(dim=dim) - self.ds.min(dim=dim)
 
-    def valid_sample_space(self,dim='number'):
+    def valid_sample_space(self,dim='number',save=True):
         total_gridpoints = self.ds['longitude'].shape[0]*self.ds['latitude'].shape[0]
         valid_grid = np.logical_and(self.obs[self.obs_var]<=self.ds[self.ds_var].max(dim='number'),self.obs[self.obs_var]>=self.ds[self.ds_var].min(dim='number'))
-        valid_stat = valid_grid.sum(['latitude','longitude'])
-        return valid_stat
+        valid_stat = valid_grid.sum(['latitude','longitude'])/total_gridpoints
+        if save:
+            valid_stat.to_netcdf(f"{self.obs_path}/stats/{str(self.ds['time'].values.astype('datetime64[D]'))}",compute=False)
 
     
