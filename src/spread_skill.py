@@ -53,7 +53,7 @@ class stats:
         valid_grid = np.logical_and(self.obs[self.obs_var]<=self.ds[self.ds_var].max(dim='number'),self.obs[self.obs_var]>=self.ds[self.ds_var].min(dim='number'))
         valid_stat = valid_grid.sum(['latitude','longitude'])/total_gridpoints
         if save:
-            valid_stat.to_netcdf(f"{self.obs_path}/stats/{str(self.ds['time'].values.astype('datetime64[D]'))}",compute=False)
+            valid_stat.to_netcdf(f"{self.obs_path}/stats/vss_{self.ds_var}_{str(self.ds['time'].values.astype('datetime64[D]'))}",compute=False)
         else:
             return valid_stat
 
