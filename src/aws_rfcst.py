@@ -86,22 +86,25 @@ def file_check(final_path, output_file):
     else:
         return False
 
-def load_cf_pf(fpath,output_file,int_step=1):
-    cf = xr.open_dataset(f'{fpath}/{output_file}.grib2',
-    engine='cfgrib',
-    backend_kwargs={
-        'filter_by_keys':{'dataType':'cf'},
-        'extra_coords':{"stepRange":"step"}
-        },
-        chunks={'number':1,'step':10}).sel(number=0).isel(step=slice(int_step,None,2))   
-    pf = xr.open_dataset(f'{fpath}/{output_file}.grib2',
-    engine='cfgrib',
-    backend_kwargs={
-        'filter_by_keys':{'dataType':'pf'},
-        'extra_coords':{"stepRange":"step"}
-        },
-        chunks={'number':1,'step':10}).isel(step=slice(int_step,None,2))   
-    return cf, pf
+def load_xr_with_datatype(fpath, output_file, datatype, int_step=1, hour_step=6):
+    ds = xr.open_dataset(f'{fpath}/{output_file}.grib2',
+        engine='cfgrib',
+        backend_kwargs={
+            'filter_by_keys':{'dataType':datatype},
+            'extra_coords':{"stepRange":"step"}
+            },
+            chunks={'number':1,'step':10}).isel(step=slice(int_step,None,2))   
+    if ds.isel(step=slice(int_step,None,2))['step'][0].values.astype('timedelta64[h]').astype(int) != hour_step:
+        int_step = 2
+        ds = xr.open_dataset(f'{fpath}/{output_file}.grib2',
+            engine='cfgrib',
+            backend_kwargs={
+                'filter_by_keys':{'dataType':datatype},
+                'extra_coords':{"stepRange":"step"}
+                },
+                chunks={'number':1,'step':10}).isel(step=slice(int_step,None,2))   
+    return ds
+
 def combine(fpath, output_file, selection_dict, final_path, stats):
 
     if len_warning(fpath) < 5:
@@ -110,10 +113,12 @@ def combine(fpath, output_file, selection_dict, final_path, stats):
     with open(f"{fpath}/{output_file}.grib2", 'w') as outfile:
         subprocess.run(['cat']+ glob.glob(fpath+'/*.grib2'), stdout=outfile)
     ensemble = pygrib.open(f'{fpath}/{output_file}.grib2')
-    cf,pf = load_cf_pf(fpath, output_file, int_step=1)
+    cf = load_xr_with_datatype(fpath, output_file, 'cf')
+    pf = load_xr_with_datatype(fpath, output_file, 'pf')
     ds = xr.concat([cf,pf],'number')
     if ds.step.shape[0] > 28:
-        cf,pf = load_cf_pf(fpath, output_file, int_step=0)  
+        cf = load_xr_with_datatype(fpath, output_file, 'cf')
+        pf = load_xr_with_datatype(fpath, output_file, 'pf')
         ds = xr.concat([cf,pf],'number')
         print(ds.step.shape[0])
         import pdb; pdb.set_trace()
