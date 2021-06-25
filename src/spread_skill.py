@@ -37,8 +37,8 @@ class stats:
 
     def obs_subset(self):
         import pdb; pdb.set_trace()
-        if np.any(self.obs.longitude.values > 180):
-            self.obs.longitude = self.obs.longitude % 360
+        if np.any(self.ds.longitude.values > 180):
+            self.ds.longitude = (self.ds.longitude + 180) % 360 - 180
         self.obs = self.obs.where(self.obs.valid_time.isin([self.ds.valid_time]),drop=True)\
             .where(self.obs.latitude.isin([self.ds.latitude]),drop=True)\
                 .where(self.obs.longitude.isin([self.ds.longitude]),drop=True)
