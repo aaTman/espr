@@ -108,7 +108,6 @@ def combine(fpath, output_file, selection_dict, final_path, stats):
         'extra_coords':{"stepRange":"step"}
         },
         chunks={'number':1,'step':10}).isel(step=slice(1,None,2))     
-    import pdb; pdb.set_trace()
     ds = xr.concat([cf,pf],'number')
     ds = ds.sel(selection_dict)
     ds_mean = ds.mean('number')
