@@ -125,8 +125,6 @@ def combine(fpath, output_file, selection_dict, final_path, stats):
         cf = load_xr_with_datatype(fpath, output_file, 'cf')
         pf = load_xr_with_datatype(fpath, output_file, 'pf')
         ds = xr.concat([cf,pf],'number')
-        print(ds.step.shape[0])
-        import pdb; pdb.set_trace()
     ds = ds.sel(selection_dict)
     ds_mean = ds.mean('number')
     ds_std = ds.std('number')
