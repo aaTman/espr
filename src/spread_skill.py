@@ -36,6 +36,8 @@ class stats:
                 self.obs = xr.open_dataset(self.obs_path)
 
     def obs_subset(self):
+        if np.any(self.obs.longitude.values > 180):
+            self.obs.longitude = self.obs.longitude % 360
         self.obs = self.obs.where(self.obs.valid_time.isin([self.ds.valid_time]),drop=True)\
             .where(self.obs.latitude.isin([self.ds.latitude]),drop=True)\
                 .where(self.obs.longitude.isin([self.ds.longitude]),drop=True)
