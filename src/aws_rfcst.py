@@ -101,6 +101,7 @@ def load_cf_pf(fpath,output_file,int_step=1):
         'extra_coords':{"stepRange":"step"}
         },
         chunks={'number':1,'step':10}).isel(step=slice(int_step,None,2))   
+    return cf, pf
 def combine(fpath, output_file, selection_dict, final_path, stats):
 
     if len_warning(fpath) < 5:
