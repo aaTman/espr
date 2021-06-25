@@ -24,7 +24,10 @@ class stats:
             self.valid_sample_space(save=save)
 
     def swap_time_dim(self,original_dim='step',new_dim='valid_time'):
-        self.ds = self.ds.swap_dims({'step':'valid_time'})
+        try:
+            self.ds = self.ds.swap_dims({'step':'valid_time'})
+        except ValueError:
+            import pdb; pdb.set_trace()
 
     def swap_obs_time_dim(self,original_dim='time',new_dim='valid_time'):
         self.obs = self.obs.rename({'time':'valid_time'})
