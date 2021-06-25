@@ -36,7 +36,6 @@ class stats:
                 self.obs = xr.open_dataset(self.obs_path)
 
     def obs_subset(self):
-        import pdb; pdb.set_trace()
         if np.any(self.ds.longitude.values > 180):
             self.ds['longitude'] = (self.ds['longitude'] + 180) % 360 - 180
         self.obs = self.obs.where(self.obs['valid_time'].isin([self.ds['valid_time']]),drop=True)\

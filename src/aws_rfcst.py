@@ -116,6 +116,7 @@ def combine(fpath, output_file, selection_dict, final_path, stats):
         ss_stat = spread_skill.stats(ds,final_path)
     else:
         pass        
+    import pdb; pdb.set_trace()
     ds_mean.to_netcdf(f"{final_path}/{output_file}_mean.nc", compute=False)
     ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",compute=False)
 
