@@ -10,7 +10,7 @@ def time_valid_errors(x, x_obs):
     return np.abs(x.msl - x_obs)
 
 class stats:
-    def __init__(self, ds, path, default_obs=True):
+    def __init__(self, ds, path, default_obs=True, save=True,run_all=True):
         self.ds = ds
         self.ds_var = [n for n in ds][0]
         self.path = path
@@ -20,7 +20,9 @@ class stats:
         self.swap_time_dim()
         self.swap_obs_time_dim()
         self.obs_subset()
-        
+        if run_all:
+            self.valid_sample_space(save=save)
+
     def swap_time_dim(self,original_dim='step',new_dim='valid_time'):
         self.ds = self.ds.swap_dims({'step':'valid_time'})
 
@@ -52,5 +54,7 @@ class stats:
         valid_stat = valid_grid.sum(['latitude','longitude'])/total_gridpoints
         if save:
             valid_stat.to_netcdf(f"{self.obs_path}/stats/{str(self.ds['time'].values.astype('datetime64[D]'))}",compute=False)
+        else:
+            return valid_stat
 
     
