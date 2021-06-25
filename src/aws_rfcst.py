@@ -87,6 +87,7 @@ def file_check(final_path, output_file):
         return False
 
 def load_xr_with_datatype(fpath, output_file, datatype, int_step=1, hour_step=6):
+    int_steps = [0, 1]
     ds = xr.open_dataset(f'{fpath}/{output_file}.grib2',
         engine='cfgrib',
         backend_kwargs={
@@ -94,9 +95,8 @@ def load_xr_with_datatype(fpath, output_file, datatype, int_step=1, hour_step=6)
             'extra_coords':{"stepRange":"step"}
             },
             chunks={'number':1,'step':10}).isel(step=slice(int_step,None,2))   
-    if ds.isel(step=slice(int_step,None,2))['step'][0].values.astype('timedelta64[h]').astype(int) != hour_step:
-        import pdb; pdb.set_trace()
-        int_step=0
+    if ds['step'][0].values.astype('timedelta64[h]').astype(int) != hour_step:
+        int_step = [n for n in int_steps if n != int_step][0]
         ds = xr.open_dataset(f'{fpath}/{output_file}.grib2',
             engine='cfgrib',
             backend_kwargs={
