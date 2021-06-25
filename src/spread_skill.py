@@ -36,7 +36,10 @@ class stats:
                 self.obs = xr.open_dataset(self.obs_path)
 
     def obs_subset(self):
-        self.obs = self.obs.where(self.obs.valid_time.isin([self.ds.valid_time]),drop=True)
+        self.obs = self.obs.where(self.obs.valid_time.isin([self.ds.valid_time]),drop=True)\
+            .where(self.obs.latitude.isin([self.ds.latitude]),drop=True)\
+                .where(self.obs.longitude.isin([self.ds.longitude]),drop=True)
+
 
     def range(self,dim='number'):
         return self.ds.max(dim=dim) - self.ds.min(dim=dim)
