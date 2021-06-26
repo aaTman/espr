@@ -135,7 +135,7 @@ def combine(fpath, output_file, selection_dict, final_path, stats):
     ds_mean.to_netcdf(f"{final_path}/{output_file}_mean.nc", compute=False)
     ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",compute=False)
 
-def create_mclimate(final_path, wx_var, season, rm, stats):
+def create_mclimate(final_path, wx_var, season, rm):
     final_file_mean = f"{final_path}/{wx_var}_mean_{season}.nc"
     final_file_std = f"{final_path}/{wx_var}_std_{season}.nc"
     ds = xr.open_mfdataset(f"{final_path}/{wx_var}*.nc",
