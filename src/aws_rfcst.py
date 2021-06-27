@@ -138,16 +138,23 @@ def combine(fpath, output_file, selection_dict, final_path, stats):
 def create_mclimate(final_path, wx_var, season, rm):
     final_file_mean = f"{final_path}/{wx_var}_mean_{season}.nc"
     final_file_std = f"{final_path}/{wx_var}_std_{season}.nc"
-    ds = xr.open_mfdataset(f"{final_path}/{wx_var}*.nc",
+    ds_mean = xr.open_mfdataset(f"{final_path}/{wx_var}*mean.nc",
                             combine='nested',
-                            concat_dim='member',
+                            concat_dim='date',
                             coords='minimal',
                             compat='override'
                             )
-    ds_mean = ds.mean('member')
-    ds_std = ds.std('member') 
-    ds_mean.to_netcdf(final_file_mean)
-    ds_std.to_netcdf(final_file_std)
+    ds_std = xr.open_mfdataset(f"{final_path}/{wx_var}*std.nc",
+                            combine='nested',
+                            concat_dim='date',
+                            coords='minimal',
+                            compat='override'
+                            )
+    comp = dict(zlib=True, complevel=5)
+    encoding_mean = {var: comp for var in ds_mean.data_vars}
+    encoding_std = {var: comp for var in ds_std.data_vars}
+    ds_mean.to_netcdf(final_file_mean,encoding=encoding_mean)
+    ds_std.to_netcdf(final_file_std,encoding=encoding_std)
     logging.info(f"{wx_var} mean and spread for {season} generated.")
     print(f"{wx_var} mean and spread for {season} generated.")
     if rm:
