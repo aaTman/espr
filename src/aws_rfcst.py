@@ -7,6 +7,7 @@ import tempfile
 import logging
 from datetime import timedelta
 import asyncio
+from dask.distributed import Client
 import pandas as pd
 import xarray as xr 
 import aiobotocore
@@ -305,9 +306,9 @@ async def download_process_reforecast(
     coro = [dl(files, selection_dict, final_path, stats) for files in files_list]
     await gather_with_concurrency(semaphore, *coro)
     rm = str_to_bool(rm)
-    
+    client = Client()
     [create_mclimate(final_path, wx_var, season, rm) for wx_var in var_names]
-
+    client.shutdown()
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(download_process_reforecast())
