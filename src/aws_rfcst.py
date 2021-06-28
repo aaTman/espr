@@ -111,7 +111,7 @@ def load_xr_with_datatype(fpath, output_file, datatype, int_step=1, hour_step=6)
             ds = ds.sel(number=0)  
     return ds
 
-def combine(fpath, output_file, selection_dict, final_path, stats):
+def combine_ensemble(fpath, output_file, selection_dict, final_path, stats):
 
     if len_warning(fpath) < 5:
         logging.warning(f"{output_file} mean will be less than 5")
@@ -167,8 +167,8 @@ def create_mclimate(final_path, wx_var, season, rm):
     comp = dict(zlib=True, complevel=5)
     encoding_mean = {var: comp for var in ds_mean.data_vars}
     encoding_std = {var: comp for var in ds_std.data_vars}
-    ds_mean.to_netcdf(final_file_mean,encoding=encoding_mean)
-    ds_std.to_netcdf(final_file_std,encoding=encoding_std)
+    ds_mean.to_netcdf(final_file_mean, encoding=encoding_mean, compute=False)
+    ds_std.to_netcdf(final_file_std,encoding=encoding_std, compute=False)
     logging.info(f"{wx_var} mean and spread for {season} generated.")
     print(f"{wx_var} mean and spread for {season} generated.")
     if rm:
@@ -199,7 +199,7 @@ async def gather_with_concurrency(n, *tasks):
             return await task
     return await asyncio.gather(*(sem_task(task) for task in tasks))
 
-async def dl(fnames, selection_dict, final_path, stats):
+async def dl(fnames, selection_dict, final_path, stats, client):
 
     bucket = 'noaa-gefs-retrospective'
     filenames = [n.split('/')[-1] for n in fnames]
@@ -226,7 +226,12 @@ async def dl(fnames, selection_dict, final_path, stats):
             if file_check(final_path, output_file):
                 pass
             else:
-                combine(fpath, output_file, selection_dict, final_path, stats)
+                if client is not None:
+                    future = client.submit(combine_ensemble, fpath, output_file, selection_dict, final_path, stats)
+                    result = await client.gather(future, asynchronous=True)
+                else: 
+                    combine_ensemble(fpath, output_file, selection_dict, final_path, stats)
+                
         return f"{s3_file} downloaded, data written, combined"
 
 @click.command()
@@ -291,6 +296,12 @@ async def dl(fnames, selection_dict, final_path, stats):
     default='n',
     help="Whether to run stats (stats summary saves to final-path, y or n, default n)"
 )
+@click.option(
+    '-d',
+    '--dask',
+    default='n',
+    help='Whether to turn on Dask or not. Dask runs with default dask.distributed client settings.'
+)
 async def download_process_reforecast(
     var_names,
     pressure_levels,
@@ -301,7 +312,13 @@ async def download_process_reforecast(
     final_path,
     semaphore,
     rm,
-    stats):
+    stats,
+    dask):
+    dask = str_to_bool(dask)
+    if dask:
+        client = Client()
+    else:
+        client = None
     source = 'https://noaa-gefs-retrospective.s3.amazonaws.com/GEFSv12/reforecast/'
     bucket = 'noaa-gefs-retrospective/GEFSv12/reforecast'
     ens = ['c00','p01','p02','p03','p04']
@@ -316,12 +333,11 @@ async def download_process_reforecast(
     s3_list_gen = (s3_list[i:i+5] for i in range(0, len(s3_list), 5))
     files_list = [n for n in s3_list_gen]
     stats = str_to_bool(stats)
-    coro = [dl(files, selection_dict, final_path, stats) for files in files_list]
+    coro = [dl(files, selection_dict, final_path, stats, client) for files in files_list]
     await gather_with_concurrency(semaphore, *coro)
     rm = str_to_bool(rm)
-    client = Client()
     [create_mclimate(final_path, wx_var, season, rm) for wx_var in var_names]
-    client.shutdown()
+
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(download_process_reforecast())
