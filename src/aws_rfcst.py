@@ -167,8 +167,8 @@ def create_mclimate(final_path, wx_var, season, rm):
     comp = dict(zlib=True, complevel=5)
     encoding_mean = {var: comp for var in ds_mean.data_vars}
     encoding_std = {var: comp for var in ds_std.data_vars}
-    ds_mean.to_netcdf(final_file_mean, encoding=encoding_mean, compute=False)
-    ds_std.to_netcdf(final_file_std,encoding=encoding_std, compute=False)
+    ds_mean.to_netcdf(final_file_mean, encoding=encoding_mean)
+    ds_std.to_netcdf(final_file_std,encoding=encoding_std)
     logging.info(f"{wx_var} mean and spread for {season} generated.")
     print(f"{wx_var} mean and spread for {season} generated.")
     if rm:
