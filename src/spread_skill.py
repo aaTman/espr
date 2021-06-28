@@ -56,7 +56,8 @@ class stats:
         total_gridpoints = self.ds['longitude'].shape[0]*self.ds['latitude'].shape[0]
         valid_grid = np.logical_and(self.obs[self.obs_var]<=self.ds[self.ds_var].max(dim='number'),self.obs[self.obs_var]>=self.ds[self.ds_var].min(dim='number'))
         valid_stat = valid_grid.sum(['latitude','longitude'])/total_gridpoints
-        import pdb; pdb.set_trace()
+        print(valid_grid)
+        print(valid_stat)
         comp = dict(zlib=True, complevel=5)
         encoding= {var: comp for var in valid_stat.data_vars}
         if save:
