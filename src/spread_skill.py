@@ -52,11 +52,14 @@ class stats:
         return self.ds.max(dim=dim) - self.ds.min(dim=dim)
 
     def valid_sample_space(self,dim='number',save=True):
+
         total_gridpoints = self.ds['longitude'].shape[0]*self.ds['latitude'].shape[0]
         valid_grid = np.logical_and(self.obs[self.obs_var]<=self.ds[self.ds_var].max(dim='number'),self.obs[self.obs_var]>=self.ds[self.ds_var].min(dim='number'))
         valid_stat = valid_grid.sum(['latitude','longitude'])/total_gridpoints
+        comp = dict(zlib=True, complevel=5)
+        encoding= {var: comp for var in valid_stat.data_vars}
         if save:
-            valid_stat.to_netcdf(f"{self.obs_path}/stats/vss_{self.ds_var}_{str(self.ds['time'].values.astype('datetime64[D]'))}",compute=False)
+            valid_stat.to_netcdf(f"{self.obs_path}/stats/vss_{self.ds_var}_{str(self.ds['time'].values.astype('datetime64[D]'))}",encoding=encoding)
         else:
             return valid_stat
 

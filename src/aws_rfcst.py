@@ -133,9 +133,13 @@ def combine(fpath, output_file, selection_dict, final_path, stats):
         ss_stat = spread_skill.stats(ds,final_path)
     else:
         pass
-    ds_mean.to_netcdf(f"{final_path}/{output_file}_mean.nc", compute=False)
-    ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",compute=False)
-
+    comp = dict(zlib=True, complevel=5)
+    encoding_mean = {var: comp for var in ds_mean.data_vars}
+    encoding_std = {var: comp for var in ds_std.data_vars}
+    ds_mean.to_netcdf(f"{final_path}/{output_file}_mean.nc",encoding=encoding_mean)
+    ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",encoding=encoding_std)
+    logging.info(f"{output_file} complete")
+    print(f"{output_file} complete")
 
 def obj_to_str(ds):
     for n in ds.coords:
