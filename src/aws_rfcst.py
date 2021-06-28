@@ -228,7 +228,7 @@ async def dl(fnames, selection_dict, final_path, stats, client):
             else:
                 if client is not None:
                     future = client.submit(combine_ensemble, fpath, output_file, selection_dict, final_path, stats)
-                    result = await client.gather(future, asynchronous=True)
+                    result = await future
                 else: 
                     combine_ensemble(fpath, output_file, selection_dict, final_path, stats)
                 
@@ -335,10 +335,14 @@ async def download_process_reforecast(
     stats = str_to_bool(stats)
     coro = [dl(files, selection_dict, final_path, stats, client) for files in files_list]
     await gather_with_concurrency(semaphore, *coro)
-    await client.close()
+    if dask:
+        await client.close()
     rm = str_to_bool(rm)
+    if dask:
+        client = Client()
     [create_mclimate(final_path, wx_var, season, rm) for wx_var in var_names]
-    
+    if dask:
+        client.shutdown()
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(download_process_reforecast())
