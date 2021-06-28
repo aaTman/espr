@@ -136,6 +136,13 @@ def combine(fpath, output_file, selection_dict, final_path, stats):
     ds_mean.to_netcdf(f"{final_path}/{output_file}_mean.nc", compute=False)
     ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",compute=False)
 
+
+def obj_to_str(ds):
+    for n in ds.coords:
+        if ds[n].dtype == 'O':
+            ds[n] = ds[n].astype(str)
+    return ds
+
 def create_mclimate(final_path, wx_var, season, rm):
     final_file_mean = f"{final_path}/{wx_var}_mean_{season}.nc"
     final_file_std = f"{final_path}/{wx_var}_std_{season}.nc"
@@ -151,6 +158,8 @@ def create_mclimate(final_path, wx_var, season, rm):
                             coords='minimal',
                             compat='override'
                             )
+    ds_mean = obj_to_str(ds_mean)
+    ds_std = obj_to_str(ds_std)
     comp = dict(zlib=True, complevel=5)
     encoding_mean = {var: comp for var in ds_mean.data_vars}
     encoding_std = {var: comp for var in ds_std.data_vars}
