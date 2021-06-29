@@ -136,8 +136,8 @@ def combine_ensemble(fpath, output_file, selection_dict, final_path, stats):
     comp = dict(zlib=True, complevel=5)
     encoding_mean = {var: comp for var in ds_mean.data_vars}
     encoding_std = {var: comp for var in ds_std.data_vars}
-    ds_mean.to_netcdf(f"{final_path}/{output_file}_mean.nc",encoding=encoding_mean)
-    ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",encoding=encoding_std)
+    ds_mean.to_netcdf(f"{final_path}/{output_file}_mean.nc",encoding=encoding_mean,engine='netcdf4')
+    ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",encoding=encoding_std,engine='netcdf4')
     logging.info(f"{output_file} complete")
     print(f"{output_file} complete")
 
@@ -167,8 +167,8 @@ def create_mclimate(final_path, wx_var, season, rm):
     comp = dict(zlib=True, complevel=5)
     encoding_mean = {var: comp for var in ds_mean.data_vars}
     encoding_std = {var: comp for var in ds_std.data_vars}
-    ds_mean.to_netcdf(final_file_mean, encoding=encoding_mean)
-    ds_std.to_netcdf(final_file_std,encoding=encoding_std)
+    ds_mean.to_netcdf(final_file_mean, encoding=encoding_mean,engine='netcdf4')
+    ds_std.to_netcdf(final_file_std,encoding=encoding_std,engine='netcdf4')
     logging.info(f"{wx_var} mean and spread for {season} generated.")
     print(f"{wx_var} mean and spread for {season} generated.")
     if rm:
