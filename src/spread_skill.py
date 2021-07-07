@@ -58,6 +58,7 @@ class stats:
         valid_stat = valid_grid.sum(['latitude','longitude'])/total_gridpoints
         print(valid_grid)
         print(valid_stat)
+        import pdb; pdb.set_trace()
         comp = dict(zlib=True, complevel=5)
         encoding= {var: comp for var in valid_stat.data_vars}
         if save:
