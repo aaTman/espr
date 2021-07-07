@@ -209,6 +209,7 @@ async def dl(fnames, selection_dict, final_path, stats, client):
             for s3_file in fnames:
                 output_file = f"{fnames[0].split('/')[-1].split('.')[-2][:-4]}"
                 if file_check(final_path, output_file):
+                    print(f'{output_file} exists, going to next')
                     pass
                 else:
                     try:
@@ -320,6 +321,8 @@ async def download_process_reforecast(
         client = await Client(asynchronous=True)
     else:
         client = None
+    print(f'stats: {stats}')
+    print(f'dask: {dask}')
     source = 'https://noaa-gefs-retrospective.s3.amazonaws.com/GEFSv12/reforecast/'
     bucket = 'noaa-gefs-retrospective/GEFSv12/reforecast'
     ens = ['c00','p01','p02','p03','p04']
