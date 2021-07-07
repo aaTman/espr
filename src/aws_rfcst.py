@@ -314,6 +314,7 @@ async def download_process_reforecast(
     rm,
     stats,
     dask):
+    print('in download_process_reforecast')
     dask = str_to_bool(dask)
     if dask:
         client = await Client(asynchronous=True)
@@ -343,6 +344,8 @@ async def download_process_reforecast(
     [create_mclimate(final_path, wx_var, season, rm) for wx_var in var_names]
     if dask:
         client.shutdown()
+
 if __name__ == "__main__":
+    print('starting')
     loop = asyncio.get_event_loop()
     loop.run_until_complete(download_process_reforecast())
