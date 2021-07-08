@@ -19,9 +19,14 @@ class stats:
             self.obs_var = [n for n in self.obs][0]
         self.swap_time_dim()
         self.swap_obs_time_dim()
-        self.obs_subset()
+        valid_filter = self.obs_subset()
+        if valid_filter:
+            pass
+        else:
+            print('dates not in obs')
         if run_all:
-            self.valid_sample_space(save=save)
+            if valid_filter:
+                self.valid_sample_space(save=save)
 
     def swap_time_dim(self,original_dim='step',new_dim='valid_time'):
         try:
@@ -43,10 +48,13 @@ class stats:
     def obs_subset(self):
         if np.any(self.ds.longitude.values > 180):
             self.ds['longitude'] = (self.ds['longitude'] + 180) % 360 - 180
-        import pdb; pdb.set_trace()
-        self.obs = self.obs.where(self.obs['valid_time'].isin([self.ds['valid_time']]),drop=True)\
-            .where(self.obs['latitude'].isin([self.ds['latitude']]),drop=True)\
-                .where(self.obs['longitude'].isin([self.ds['longitude']]),drop=True)
+        try:
+            self.obs = self.obs.where(self.obs['valid_time'].isin([self.ds['valid_time']]),drop=True)\
+                .where(self.obs['latitude'].isin([self.ds['latitude']]),drop=True)\
+                    .where(self.obs['longitude'].isin([self.ds['longitude']]),drop=True)
+            return True
+        except OverflowError:
+            return False
 
 
     def range(self,dim='number'):
