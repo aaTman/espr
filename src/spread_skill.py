@@ -68,7 +68,8 @@ class stats:
         try:
             encoding= {var: comp for var in valid_grid.data_vars}
         except AttributeError:
-            encoding = comp
+            valid_grid = valid_grid.to_dataset(name=[n for n in self.ds.data_vars][0])
+            encoding= {var: comp for var in valid_grid.data_vars}
         if save:
             valid_grid.to_netcdf(f"{self.obs_path}/stats/vss_{self.ds_var}_{str(self.ds['time'].values.astype('datetime64[D]'))}",encoding=encoding)
         else:
