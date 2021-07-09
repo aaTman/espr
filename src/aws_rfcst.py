@@ -111,7 +111,7 @@ def load_xr_with_datatype(fpath, output_file, datatype, int_step=1, hour_step=6)
             ds = ds.sel(number=0)  
     return ds
 
-def combine_ensemble(fpath, output_file, selection_dict, final_path, stats):
+def combine_ensemble(fpath, output_file, selection_dict, final_path, stats, save_file):
 
     if len_warning(fpath) < 5:
         logging.warning(f"{output_file} mean will be less than 5")
@@ -136,8 +136,9 @@ def combine_ensemble(fpath, output_file, selection_dict, final_path, stats):
     comp = dict(zlib=True, complevel=5)
     encoding_mean = {var: comp for var in ds_mean.data_vars}
     encoding_std = {var: comp for var in ds_std.data_vars}
-    ds_mean.to_netcdf(f"{final_path}/{output_file}_mean.nc",encoding=encoding_mean,engine='netcdf4')
-    ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",encoding=encoding_std,engine='netcdf4')
+    if save_file:
+        ds_mean.to_netcdf(f"{final_path}/{output_file}_mean.nc",encoding=encoding_mean,engine='netcdf4')
+        ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",encoding=encoding_std,engine='netcdf4')
     logging.info(f"{output_file} complete")
     print(f"{output_file} complete")
 
@@ -199,7 +200,7 @@ async def gather_with_concurrency(n, *tasks):
             return await task
     return await asyncio.gather(*(sem_task(task) for task in tasks))
 
-async def dl(fnames, selection_dict, final_path, stats, client):
+async def dl(fnames, selection_dict, final_path, stats, client, save_file):
 
     bucket = 'noaa-gefs-retrospective'
     filenames = [n.split('/')[-1] for n in fnames]
@@ -231,7 +232,7 @@ async def dl(fnames, selection_dict, final_path, stats, client):
                     future = client.submit(combine_ensemble, fpath, output_file, selection_dict, final_path, stats)
                     result = await future
                 else: 
-                    combine_ensemble(fpath, output_file, selection_dict, final_path, stats)
+                    combine_ensemble(fpath, output_file, selection_dict, final_path, stats, save_file)
                 
         return f"{s3_file} downloaded, data written, combined"
 
@@ -303,6 +304,11 @@ async def dl(fnames, selection_dict, final_path, stats, client):
     default='n',
     help='Whether to turn on Dask or not. Dask runs with default dask.distributed client settings.'
 )
+@click.option(
+    '--save_file',
+    default='y',
+    help='Saves mean and spread files, defaults to y'
+)
 async def download_process_reforecast(
     var_names,
     pressure_levels,
@@ -314,9 +320,11 @@ async def download_process_reforecast(
     semaphore,
     rm,
     stats,
-    dask):
+    dask,
+    save_file):
     print('in download_process_reforecast')
     dask = str_to_bool(dask)
+    save_file = str_to_bool(save_file)
     if dask:
         client = await Client(asynchronous=True)
     else:
@@ -337,7 +345,7 @@ async def download_process_reforecast(
     s3_list_gen = (s3_list[i:i+5] for i in range(0, len(s3_list), 5))
     files_list = [n for n in s3_list_gen]
     stats = str_to_bool(stats)
-    coro = [dl(files, selection_dict, final_path, stats, client) for files in files_list]
+    coro = [dl(files, selection_dict, final_path, stats, client, save_file) for files in files_list]
     await gather_with_concurrency(semaphore, *coro)
     if dask:
         await client.close()
