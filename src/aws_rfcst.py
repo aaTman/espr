@@ -121,6 +121,7 @@ def combine_ensemble(fpath, output_file, selection_dict, final_path, stats, save
     ensemble = pygrib.open(f'{fpath}/{output_file}.grib2')
     cf = load_xr_with_datatype(fpath, output_file, 'cf')
     pf = load_xr_with_datatype(fpath, output_file, 'pf')
+    import pdb; pdb.set_trace()
     ds = xr.concat([cf,pf],'number')
     if ds.step.shape[0] > 28:
         cf = load_xr_with_datatype(fpath, output_file, 'cf')
