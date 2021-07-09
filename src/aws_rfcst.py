@@ -127,7 +127,7 @@ def combine_ensemble(fpath, output_file, selection_dict, final_path, stats, save
         cf = load_xr_with_datatype(fpath, output_file, 'cf')
         pf = load_xr_with_datatype(fpath, output_file, 'pf')
         ds = xr.concat([cf,pf],'number')
-    if len(ds['valid_time']) > 1:
+    if len(ds['valid_time'].shape) > 1:
         import pdb; pdb.set_trace()
     ds_mean = ds.mean('number')
     ds_std = ds.std('number')
