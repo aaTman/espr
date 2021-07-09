@@ -61,7 +61,7 @@ class stats:
         return self.ds.max(dim=dim) - self.ds.min(dim=dim)
 
     def valid_sample_space(self, dim='number', save=True):
-
+        import pdb; pdb.set_trace()
         valid_grid = np.logical_and(self.obs[self.obs_var]<=self.ds[self.ds_var].max(dim='number'),self.obs[self.obs_var]>=self.ds[self.ds_var].min(dim='number'))
         print(valid_grid)
         comp = dict(zlib=True, complevel=5)
