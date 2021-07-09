@@ -34,6 +34,12 @@ class stats:
         except ValueError as e:
             print(e)
             print(self.ds)
+            print(self.ds['valid_time'].values)
+            try:
+                self.ds['valid_time'] = self.ds['valid_time'][0]
+                self.ds = self.ds.swap_dims({original_dim:new_dim})
+            except:
+                print('didnt swap dims still')
             
 
     def swap_obs_time_dim(self,original_dim='time',new_dim='valid_time'):
