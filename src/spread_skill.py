@@ -30,12 +30,14 @@ class stats:
 
     def swap_time_dim(self,original_dim='step',new_dim='valid_time'):
         try:
-            self.ds = self.ds.swap_dims({'step':'valid_time'})
-        except ValueError:
-            import pdb; pdb.set_trace()
+            self.ds = self.ds.swap_dims({original_dim:new_dim})
+        except ValueError as e:
+            print(e)
+            print(self.ds)
+            
 
     def swap_obs_time_dim(self,original_dim='time',new_dim='valid_time'):
-        self.obs = self.obs.rename({'time':'valid_time'})
+        self.obs = self.obs.rename(({original_dim:new_dim}))
     
     def set_obs_path(self, path, load=True, dask=True):
         self.obs_path = path
