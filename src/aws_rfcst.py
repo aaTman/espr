@@ -121,13 +121,14 @@ def combine_ensemble(fpath, output_file, selection_dict, final_path, stats, save
     ensemble = pygrib.open(f'{fpath}/{output_file}.grib2')
     cf = load_xr_with_datatype(fpath, output_file, 'cf')
     pf = load_xr_with_datatype(fpath, output_file, 'pf')
-    import pdb; pdb.set_trace()
     ds = xr.concat([cf,pf],'number')
+    ds = ds.sel(selection_dict)
     if ds.step.shape[0] > 28:
         cf = load_xr_with_datatype(fpath, output_file, 'cf')
         pf = load_xr_with_datatype(fpath, output_file, 'pf')
         ds = xr.concat([cf,pf],'number')
-    ds = ds.sel(selection_dict)
+    if len(ds['valid_time']) > 1:
+        import pdb; pdb.set_trace()
     ds_mean = ds.mean('number')
     ds_std = ds.std('number')
     if stats:
