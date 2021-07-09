@@ -229,7 +229,7 @@ async def dl(fnames, selection_dict, final_path, stats, client, save_file):
                 pass
             else:
                 if client is not None:
-                    future = client.submit(combine_ensemble, fpath, output_file, selection_dict, final_path, stats)
+                    future = client.submit(combine_ensemble, fpath, output_file, selection_dict, final_path, stats, save_file)
                     result = await future
                 else: 
                     combine_ensemble(fpath, output_file, selection_dict, final_path, stats, save_file)
