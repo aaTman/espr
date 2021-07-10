@@ -128,21 +128,23 @@ def combine_ensemble(fpath, output_file, selection_dict, final_path, stats, save
         pf = load_xr_with_datatype(fpath, output_file, 'pf')
         ds = xr.concat([cf,pf],'number')
     if len(ds['valid_time'].shape) > 1:
-        import pdb; pdb.set_trace()
-    ds_mean = ds.mean('number')
-    ds_std = ds.std('number')
-    if stats:
-        ss_stat = spread_skill.stats(ds,final_path)
-    else:
+        logging.error(f'error with cf members, skipping date {output_file}')
         pass
-    comp = dict(zlib=True, complevel=5)
-    encoding_mean = {var: comp for var in ds_mean.data_vars}
-    encoding_std = {var: comp for var in ds_std.data_vars}
-    if save_file:
-        ds_mean.to_netcdf(f"{final_path}/{output_file}_mean.nc",encoding=encoding_mean,engine='netcdf4')
-        ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",encoding=encoding_std,engine='netcdf4')
-    logging.info(f"{output_file} complete")
-    print(f"{output_file} complete")
+    else:
+        ds_mean = ds.mean('number')
+        ds_std = ds.std('number')
+        if stats:
+            ss_stat = spread_skill.stats(ds,final_path)
+        else:
+            pass
+        comp = dict(zlib=True, complevel=5)
+        encoding_mean = {var: comp for var in ds_mean.data_vars}
+        encoding_std = {var: comp for var in ds_std.data_vars}
+        if save_file:
+            ds_mean.to_netcdf(f"{final_path}/{output_file}_mean.nc",encoding=encoding_mean,engine='netcdf4')
+            ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",encoding=encoding_std,engine='netcdf4')
+        logging.info(f"{output_file} complete")
+        print(f"{output_file} complete")
 
 def obj_to_str(ds):
     for n in ds.coords:
@@ -296,7 +298,7 @@ async def dl(fnames, selection_dict, final_path, stats, client, save_file):
     help="Whether to delete downloaded files after combination into mclimate file (y or n, default n)"
 )
 @click.option(
-    '-stats',
+    '--stats',
     default='n',
     help="Whether to run stats (stats summary saves to final-path, y or n, default n)"
 )
