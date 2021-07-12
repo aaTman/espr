@@ -14,6 +14,8 @@ class stats:
     def __init__(self, ds, path, default_obs=True, save=True,run_all=True):
         self.ds = ds
         self.ds_var = [n for n in ds][0]
+        if self.ds_var == 'tcc':
+            self.ds/=100
         self.path = path
         if default_obs:
             self.set_obs_path(f'/home/taylorm/espr/analysis')
@@ -75,7 +77,6 @@ class stats:
         #     pass
         # else:
         valid_grid = xr.ufuncs.logical_and(self.obs[self.obs_var]<=self.ds[self.ds_var].max(dim='number'),self.obs[self.obs_var]>=self.ds[self.ds_var].min(dim='number'))
-        import pdb; pdb. set_trace()
         comp = dict(zlib=True, complevel=5)
         try:
             encoding= {var: comp for var in valid_grid.data_vars}
