@@ -76,7 +76,9 @@ class stats:
             print(f"{self.obs_path}/stats/vss_{self.ds_var}_{str(self.ds['time'].values.astype('datetime64[D]'))} exists, skipping")
             pass
         else:
+            
             valid_grid = xr.ufuncs.logical_and(self.obs[self.obs_var]<=self.ds[self.ds_var].max(dim='number'),self.obs[self.obs_var]>=self.ds[self.ds_var].min(dim='number'))
+            import pdb; pdb.set_trace()
             comp = dict(zlib=True, complevel=5)
             try:
                 encoding= {var: comp for var in valid_grid.data_vars}
