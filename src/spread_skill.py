@@ -1,6 +1,9 @@
+from logging import error
 import xarray as xr
 import numpy as np
 import os 
+import logging
+logging.basicConfig(filename='output_spread_skill.log', level=logging.WARNING)
 
 def xarr_std(x):
     return (x - x.mean()) / x.std()
@@ -84,7 +87,12 @@ class stats:
                 valid_grid = valid_grid.to_dataset(name=[n for n in self.ds.data_vars][0])
                 encoding= {var: comp for var in valid_grid.data_vars}
             if save:
-                valid_grid.to_netcdf(f"{self.obs_path}/stats/vss_{self.ds_var}_{str(self.ds['time'].values.astype('datetime64[D]'))}",encoding=encoding)
+                try:
+                    valid_grid.to_netcdf(f"{self.obs_path}/stats/vss_{self.ds_var}_{str(self.ds['time'].values.astype('datetime64[D]'))}",encoding=encoding)
+                except OSError as e:
+                    logging.error(e)
+                    pass
+
             else:
                 return valid_grid
 
