@@ -1,2 +1,2 @@
-![logo](https://github.com/aaTman/espr/images/espr_logo.png)
+![logo](https://github.com/aaTman/espr/blob/master/images/espr_logo.png)
 This repo is the backend to what will be a uncertainty quantification app & API using the GEFSv12 Reforecast as the reference hindcast/reforecast.
