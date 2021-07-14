@@ -3,6 +3,7 @@ import xarray as xr
 import numpy as np
 import os 
 import logging
+import xskillscore
 logging.basicConfig(filename='output_spread_skill.log', level=logging.WARNING)
 
 def xarr_std(x):
@@ -32,7 +33,11 @@ class stats:
             print('dates not in obs')
         if run_all:
             if valid_filter:
-                self.valid_sample_space(save=save)
+                import pdb; pdb.set_trace()
+                vss = self.valid_sample_space(save=False)
+                vss.attrs['crps_ens'] = {n:self.crps_ensemble(self.obs, self.ds) for n in self.ds.step.values.astype('timedelta64[h]').astype(int)} ##not done
+                vss.attrs['bias'] = {n:self.crps_ensemble(self.obs, self.ds) for n in self.ds.step.values.astype('timedelta64[h]').astype(int)}
+
 
     def swap_time_dim(self,original_dim='step',new_dim='valid_time'):
         try:
@@ -47,6 +52,9 @@ class stats:
             except:
                 print('didnt swap dims still')
             
+    def crps_ensemble(self,in_fcst,in_obs):
+        return xskillscore.crps_ensemble(in_obs, in_fcst)
+
 
     def swap_obs_time_dim(self,original_dim='time',new_dim='valid_time'):
         self.obs = self.obs.rename(({original_dim:new_dim}))
@@ -74,6 +82,9 @@ class stats:
     def range(self,dim='number'):
         return self.ds.max(dim=dim) - self.ds.min(dim=dim)
 
+    def mean_bias(self):
+        xr.ufuncs.mean(self.obs[self.obs_var]-self.ds[self.ds_var])
+    
     def valid_sample_space(self, dim='number', save=True):
         if os.path.exists(f"{self.obs_path}/stats/vss_{self.ds_var}_{str(self.ds['time'].values.astype('datetime64[D]'))}"):
             print(f"{self.obs_path}/stats/vss_{self.ds_var}_{str(self.ds['time'].values.astype('datetime64[D]'))} exists, skipping")
@@ -84,7 +95,7 @@ class stats:
             try:
                 encoding= {var: comp for var in valid_grid.data_vars}
             except AttributeError:
-                valid_grid = valid_grid.to_dataset(name=[n for n in self.ds.data_vars][0])
+                valid_grid = valid_grid.to_dataset(name=f'{[n for n in self.ds.data_vars][0]}_vss')
                 encoding= {var: comp for var in valid_grid.data_vars}
             if save:
                 try:
