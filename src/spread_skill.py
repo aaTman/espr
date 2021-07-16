@@ -35,7 +35,7 @@ class stats:
             if valid_filter:
                 import pdb; pdb.set_trace()
                 vss = self.valid_sample_space(save=False)
-                vss.attrs['crps_ens'] = {n:self.crps_ensemble(self.obs, self.ds) for n in self.ds.step.values.astype('timedelta64[h]').astype(int)} ##not done
+                vss.attrs['crps_ens'] = {n:self.crps_ensemble(self.obs, self.ds.rename({'member':'member_dim'})) for n in self.ds.step.values.astype('timedelta64[h]').astype(int)} ##not done
                 vss.attrs['bias'] = {n:self.crps_ensemble(self.obs, self.ds) for n in self.ds.step.values.astype('timedelta64[h]').astype(int)}
 
 
