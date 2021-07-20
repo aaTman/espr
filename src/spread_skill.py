@@ -52,11 +52,11 @@ class stats:
                 print('didnt swap dims still')
             
     def crps_ensemble(self, dim):
-        in_fcst = self.ds.chunk({'latitude':len(self.ds['latitude']),
+        in_fcst = self.ds[self.ds_var].chunk({'latitude':len(self.ds['latitude']),
         'longitude':len(self.ds['longitude']),
         'number':len(self.ds['number']),
         'valid_time':1})
-        in_obs = self.obs.chunk({'latitude':len(self.ds['latitude']),
+        in_obs = self.obs[self.obs_var].chunk({'latitude':len(self.ds['latitude']),
         'longitude':len(self.ds['longitude']),
         'valid_time':1})
         import pdb; pdb.set_trace()
