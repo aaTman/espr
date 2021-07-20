@@ -34,7 +34,6 @@ class stats:
         _ = self.fcst_subset()
         if run_all:
             if valid_filter:
-                import pdb; pdb.set_trace()
                 vss = self.valid_sample_space(save=False)
                 vss['crps_ens'] = self.crps_ensemble(crps_dim)
                 vss['me'] = self.mean_bias()
@@ -60,6 +59,7 @@ class stats:
         in_obs = self.obs.chunk({'latitude':len(self.ds['latitude']),
         'longitude':len(self.ds['longitude']),
         'valid_time':1})
+        import pdb; pdb.set_trace()
         return xskillscore.crps_ensemble(in_obs, in_fcst, dim=dim)
 
 
