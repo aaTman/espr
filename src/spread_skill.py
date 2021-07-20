@@ -35,9 +35,7 @@ class stats:
             if valid_filter:
                 import pdb; pdb.set_trace()
                 vss = self.valid_sample_space(save=False)
-                vss.attrs['crps_ens'] = {n:self.crps_ensemble(self.obs, self.ds.rename({'member':'member_dim'})) for n in self.ds.step.values.astype('timedelta64[h]').astype(int)} ##not done
-                vss.attrs['bias'] = {n:self.crps_ensemble(self.obs, self.ds) for n in self.ds.step.values.astype('timedelta64[h]').astype(int)}
-
+                vss['crps_ens'] = self.crps_ensemble(self.obs, self.ds, [])
 
     def swap_time_dim(self,original_dim='step',new_dim='valid_time'):
         try:
@@ -52,8 +50,8 @@ class stats:
             except:
                 print('didnt swap dims still')
             
-    def crps_ensemble(self,in_fcst,in_obs):
-        return xskillscore.crps_ensemble(in_obs, in_fcst)
+    def crps_ensemble(self, in_fcst, in_obs, dim):
+        return xskillscore.crps_ensemble(in_obs, in_fcst, dim=dim)
 
 
     def swap_obs_time_dim(self,original_dim='time',new_dim='valid_time'):
@@ -77,7 +75,6 @@ class stats:
             return True
         except OverflowError:
             return False
-
 
     def range(self,dim='number'):
         return self.ds.max(dim=dim) - self.ds.min(dim=dim)
