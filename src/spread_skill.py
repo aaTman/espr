@@ -85,7 +85,7 @@ class stats:
         except OverflowError:
             return False
 
-    def ds_subset(self):
+    def fcst_subset(self):
         if np.any(self.ds.longitude.values > 180):
             self.ds['longitude'] = (self.ds['longitude'] + 180) % 360 - 180
         try:
