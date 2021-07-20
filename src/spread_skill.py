@@ -31,7 +31,7 @@ class stats:
         if valid_filter:
             pass
         else:
-            print('dates not in obs')
+            logging.error('dates not in obs')
         _ = self.fcst_subset()
         if run_all:
             if valid_filter:
@@ -46,14 +46,12 @@ class stats:
         try:
             self.ds = self.ds.swap_dims({original_dim:new_dim})
         except ValueError as e:
-            print(e)
-            print(self.ds)
-            print(self.ds['valid_time'].values)
+            logging.error(e)
             try:
                 self.ds['valid_time'] = self.ds['valid_time'][0]
                 self.ds = self.ds.swap_dims({original_dim:new_dim})
             except:
-                print('didnt swap dims still')
+                logging.error('didnt swap dims still')
             
     def crps_ensemble(self, dim):
         in_fcst = self.ds[self.ds_var].chunk({'latitude':len(self.ds['latitude']),
@@ -107,7 +105,7 @@ class stats:
     
     def valid_sample_space(self, dim='number', save=True):
         if os.path.exists(f"{self.obs_path}/stats/vss_{self.ds_var}_{str(self.ds['time'].values.astype('datetime64[D]'))}"):
-            print(f"{self.obs_path}/stats/vss_{self.ds_var}_{str(self.ds['time'].values.astype('datetime64[D]'))} exists, skipping")
+            logging.error(f"{self.obs_path}/stats/vss_{self.ds_var}_{str(self.ds['time'].values.astype('datetime64[D]'))} exists, skipping")
             pass
         else:
             valid_grid = xr.ufuncs.logical_and(self.obs[self.obs_var]<=self.ds[self.ds_var].max(dim='number'),self.obs[self.obs_var]>=self.ds[self.ds_var].min(dim='number'))
