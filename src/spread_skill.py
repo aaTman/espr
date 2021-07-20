@@ -60,7 +60,7 @@ class stats:
         'longitude':len(self.ds['longitude']),
         'valid_time':1})
         import pdb; pdb.set_trace()
-        return xskillscore.crps_ensemble(in_obs, in_fcst, dim=dim)
+        return xskillscore.crps_ensemble(in_obs, in_fcst, member_dim='number', dim=dim)
 
 
     def swap_obs_time_dim(self,original_dim='time',new_dim='valid_time'):
