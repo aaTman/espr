@@ -18,6 +18,7 @@ class stats:
     def __init__(self, ds, path, default_obs=True, save=True, run_all=True, crps_dim=[]):
         self.ds = ds
         self.ds_var = [n for n in ds][0]
+        self.comp = dict(zlib=True, complevel=5)
         if self.ds_var == 'tcc':
             self.ds/=100
         self.path = path
@@ -34,9 +35,12 @@ class stats:
         _ = self.fcst_subset()
         if run_all:
             if valid_filter:
-                vss = self.valid_sample_space(save=False)
-                vss['crps_ens'] = self.crps_ensemble(crps_dim)
-                vss['me'] = self.mean_bias()
+                stat_ds = self.valid_sample_space(save=False)
+                stat_ds['crps_ens'] = self.crps_ensemble(crps_dim)
+                stat_ds['me'] = self.mean_bias()
+            if save:
+                encoding= {var: self.comp for var in stat_ds.data_vars}
+                stat_ds.to_netcdf(f"{self.obs_path}/stats/vss_{self.ds_var}_{str(self.ds['time'].values.astype('datetime64[D]'))}.nc",encoding=encoding)
 
     def swap_time_dim(self,original_dim='step',new_dim='valid_time'):
         try:
@@ -59,7 +63,6 @@ class stats:
         in_obs = self.obs[self.obs_var].chunk({'latitude':len(self.ds['latitude']),
         'longitude':len(self.ds['longitude']),
         'valid_time':1})
-        import pdb; pdb.set_trace()
         return xskillscore.crps_ensemble(in_obs, in_fcst, member_dim='number', dim=dim)
 
 
@@ -108,12 +111,11 @@ class stats:
             pass
         else:
             valid_grid = xr.ufuncs.logical_and(self.obs[self.obs_var]<=self.ds[self.ds_var].max(dim='number'),self.obs[self.obs_var]>=self.ds[self.ds_var].min(dim='number'))
-            comp = dict(zlib=True, complevel=5)
             try:
-                encoding= {var: comp for var in valid_grid.data_vars}
+                encoding= {var: self.comp for var in valid_grid.data_vars}
             except AttributeError:
                 valid_grid = valid_grid.to_dataset(name=f'{[n for n in self.ds.data_vars][0]}_vss')
-                encoding= {var: comp for var in valid_grid.data_vars}
+                encoding= {var: self.comp for var in valid_grid.data_vars}
             if save:
                 try:
                     valid_grid.to_netcdf(f"{self.obs_path}/stats/vss_{self.ds_var}_{str(self.ds['time'].values.astype('datetime64[D]'))}",encoding=encoding)
