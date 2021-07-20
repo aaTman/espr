@@ -103,7 +103,7 @@ class stats:
         return self.ds.max(dim=dim) - self.ds.min(dim=dim)
 
     def mean_bias(self):
-        return xr.ufuncs.mean(self.obs[self.obs_var]-self.ds[self.ds_var])
+        return np.mean(self.obs[self.obs_var]-self.ds[self.ds_var])
     
     def valid_sample_space(self, dim='number', save=True):
         if os.path.exists(f"{self.obs_path}/stats/vss_{self.ds_var}_{str(self.ds['time'].values.astype('datetime64[D]'))}"):
