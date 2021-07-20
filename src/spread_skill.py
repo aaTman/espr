@@ -15,7 +15,7 @@ def time_valid_errors(x, x_obs):
     return np.abs(x.msl - x_obs)
 
 class stats:
-    def __init__(self, ds, path, default_obs=True, save=True,run_all=True):
+    def __init__(self, ds, path, default_obs=True, save=True, run_all=True, crps_dim=[]):
         self.ds = ds
         self.ds_var = [n for n in ds][0]
         if self.ds_var == 'tcc':
@@ -31,11 +31,13 @@ class stats:
             pass
         else:
             print('dates not in obs')
+        _ = self.fcst_subset()
         if run_all:
             if valid_filter:
                 import pdb; pdb.set_trace()
                 vss = self.valid_sample_space(save=False)
-                vss['crps_ens'] = self.crps_ensemble(self.obs, self.ds, [])
+                vss['crps_ens'] = self.crps_ensemble(crps_dim)
+                vss['me'] = self.mean_bias()
 
     def swap_time_dim(self,original_dim='step',new_dim='valid_time'):
         try:
@@ -50,7 +52,14 @@ class stats:
             except:
                 print('didnt swap dims still')
             
-    def crps_ensemble(self, in_fcst, in_obs, dim):
+    def crps_ensemble(self, dim):
+        in_fcst = self.ds.chunk({'latitude':len(self.ds['latitude']),
+        'longitude':len(self.ds['longitude']),
+        'number':len(self.ds['number']),
+        'valid_time':1})
+        in_obs = self.obs.chunk({'latitude':len(self.ds['latitude']),
+        'longitude':len(self.ds['longitude']),
+        'valid_time':1})
         return xskillscore.crps_ensemble(in_obs, in_fcst, dim=dim)
 
 
@@ -76,11 +85,22 @@ class stats:
         except OverflowError:
             return False
 
+    def ds_subset(self):
+        if np.any(self.ds.longitude.values > 180):
+            self.ds['longitude'] = (self.ds['longitude'] + 180) % 360 - 180
+        try:
+            self.ds = self.ds.where(self.ds['valid_time'].isin([self.obs['valid_time']]),drop=True)\
+                .where(self.ds['latitude'].isin([self.obs['latitude']]),drop=True)\
+                    .where(self.ds['longitude'].isin([self.obs['longitude']]),drop=True)
+            return True
+        except OverflowError:
+            return False
+
     def range(self,dim='number'):
         return self.ds.max(dim=dim) - self.ds.min(dim=dim)
 
     def mean_bias(self):
-        xr.ufuncs.mean(self.obs[self.obs_var]-self.ds[self.ds_var])
+        return xr.ufuncs.mean(self.obs[self.obs_var]-self.ds[self.ds_var])
     
     def valid_sample_space(self, dim='number', save=True):
         if os.path.exists(f"{self.obs_path}/stats/vss_{self.ds_var}_{str(self.ds['time'].values.astype('datetime64[D]'))}"):
