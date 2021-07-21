@@ -83,8 +83,11 @@ class stats:
                 .where(self.obs['latitude'].isin([self.ds['latitude']]),drop=True)\
                     .where(self.obs['longitude'].isin([self.ds['longitude']]),drop=True)
             return True
-        except OverflowError:
+        except OverflowError as e:
+            logging.error(e)
             return False
+        except ValueError as e:
+            logging.error(e)
 
     def fcst_subset(self):
         if np.any(self.ds.longitude.values > 180):
