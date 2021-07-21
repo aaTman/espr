@@ -31,6 +31,7 @@ class stats:
         if valid_filter:
             pass
         else:
+            logging.error('no dates in obs')
         _ = self.fcst_subset()
         if run_all:
             if valid_filter:
