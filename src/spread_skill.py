@@ -31,16 +31,15 @@ class stats:
         if valid_filter:
             pass
         else:
-            logging.error('dates not in obs')
         _ = self.fcst_subset()
         if run_all:
             if valid_filter:
                 stat_ds = self.valid_sample_space(save=False)
                 stat_ds['crps_ens'] = self.crps_ensemble(crps_dim)
                 stat_ds['me'] = self.mean_bias()
-            if save:
                 encoding= {var: self.comp for var in stat_ds.data_vars}
-                stat_ds.to_netcdf(f"{self.obs_path}/stats/vss_{self.ds_var}_{str(self.ds['time'].values.astype('datetime64[D]'))}.nc",encoding=encoding)
+                if save:
+                    stat_ds.to_netcdf(f"{self.obs_path}/stats/vss_{self.ds_var}_{str(self.ds['time'].values.astype('datetime64[D]'))}.nc",encoding=encoding)
 
     def swap_time_dim(self,original_dim='step',new_dim='valid_time'):
         try:
