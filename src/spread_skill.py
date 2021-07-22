@@ -99,6 +99,8 @@ class stats:
             return True
         except OverflowError:
             return False
+        except ValueError:
+            return False
 
     def range(self,dim='number'):
         return self.ds.max(dim=dim) - self.ds.min(dim=dim)
