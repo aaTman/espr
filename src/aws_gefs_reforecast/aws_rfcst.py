@@ -19,7 +19,6 @@ import pygrib
 import cfgrib
 import spread_skill
 
-
 logging.basicConfig(filename='output.log', level=logging.WARNING)
 
 config = Config(
@@ -48,8 +47,6 @@ def create_selection_dict(
     Dict[str, slice]
         A dictionary of slices to use on an xarray Dataset.
     """
-    if len(pressure_levels) > 0:
-        print('pressure levels not set up yet')
     latitude_slice = slice(max(latitude_bounds), min(latitude_bounds))
     longitude_slice = slice(min(longitude_bounds), max(longitude_bounds))
     first_forecast_hour = pd.Timedelta(f"{min(forecast_days_bounds)} days")
@@ -114,7 +111,7 @@ def load_xr_with_datatype(fpath, output_file, datatype, int_step=1, hour_step=6)
 def combine_ensemble(fpath, output_file, selection_dict, final_path, stats, save_file):
     if len_warning(fpath) < 5:
         logging.warning(f"{output_file} mean will be less than 5")
-    print(f"{output_file}")
+    logging.info(f"{output_file}")
     with open(f"{fpath}/{output_file}.grib2", 'w') as outfile:
         subprocess.run(['cat']+ glob.glob(fpath+'/*.grib2'), stdout=outfile)
     ensemble = pygrib.open(f'{fpath}/{output_file}.grib2')
@@ -143,7 +140,7 @@ def combine_ensemble(fpath, output_file, selection_dict, final_path, stats, save
             ds_mean.to_netcdf(f"{final_path}/{output_file}_mean.nc",encoding=encoding_mean,engine='netcdf4')
             ds_std.to_netcdf(f"{final_path}/{output_file}_std.nc",encoding=encoding_std,engine='netcdf4')
         logging.info(f"{output_file} complete")
-        print(f"{output_file} complete")
+        logging.info(f"{output_file} complete")
 
 def obj_to_str(ds):
     for n in ds.coords:
@@ -174,7 +171,7 @@ def create_mclimate(final_path, wx_var, season, rm):
     ds_mean.to_netcdf(final_file_mean, encoding=encoding_mean,engine='netcdf4')
     ds_std.to_netcdf(final_file_std,encoding=encoding_std,engine='netcdf4')
     logging.info(f"{wx_var} mean and spread for {season} generated.")
-    print(f"{wx_var} mean and spread for {season} generated.")
+    logging.info(f"{wx_var} mean and spread for {season} generated.")
     if rm:
         rm_files(final_path, wx_var)
 
@@ -213,20 +210,20 @@ async def dl(fnames, selection_dict, final_path, stats, client, save_file):
             for s3_file in fnames:
                 output_file = f"{fnames[0].split('/')[-1].split('.')[-2][:-4]}"
                 if file_check(final_path, output_file):
-                    print(f'{output_file} exists, going to next')
+                    logging.info(f'{output_file} exists, going to next')
                     pass
                 else:
                     try:
                         filename = s3_file.split('/')[-1]
                         await s3.meta.client.download_file(bucket, s3_file, f"{fpath}/{filename}")
-                        print(f'{s3_file} read success!')
+                        logging.info(f'{s3_file} read success!')
                     except FileNotFoundError as e:
                         logging.warning(f"{filename} not downloaded, not found")
-                        print(e)
+                        logging.info(e)
                         pass
                     except aiobotocore.response.AioReadTimeoutError as e:
                         logging.warning(f"{filename} not downloaded, timeout")
-                        print(e)
+                        logging.info(e)
                         pass
             if file_check(final_path, output_file):
                 pass
@@ -325,15 +322,16 @@ async def download_process_reforecast(
     stats,
     dask,
     save_file):
-    print('in download_process_reforecast')
+    assert len(pressure_levels) == 0, 'pressure levels not set up yet'
+
     dask = str_to_bool(dask)
     save_file = str_to_bool(save_file)
     if dask:
         client = await Client(asynchronous=True)
     else:
         client = None
-    print(f'stats: {stats}')
-    print(f'dask: {dask}')
+    logging.info(f'stats: {stats}')
+    logging.info(f'dask: {dask}')
     source = 'https://noaa-gefs-retrospective.s3.amazonaws.com/GEFSv12/reforecast/'
     bucket = 'noaa-gefs-retrospective/GEFSv12/reforecast'
     ens = ['c00','p01','p02','p03','p04']
@@ -360,6 +358,5 @@ async def download_process_reforecast(
         client.shutdown()
 
 if __name__ == "__main__":
-    print('starting')
     loop = asyncio.get_event_loop()
     loop.run_until_complete(download_process_reforecast())
