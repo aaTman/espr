@@ -36,7 +36,10 @@ class stats:
         if run_all:
             if valid_filter:
                 stat_ds = self.valid_sample_space(save=False)
-                stat_ds['crps_ens'] = self.crps_ensemble(crps_dim)
+                try:
+                    stat_ds['crps_ens'] = self.crps_ensemble(crps_dim)
+                except ValueError as e:
+                    logging.error(e)
                 stat_ds['me'] = self.mean_bias()
                 encoding= {var: self.comp for var in stat_ds.data_vars}
                 if save:
