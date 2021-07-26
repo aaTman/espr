@@ -3,3 +3,6 @@ src/__pycache__
 src/dask-worker-space
 src/.ipynb_checkpoints
 .vscode
+
+#Ignoring Juypyter notebooks
+src/*.ipynb
