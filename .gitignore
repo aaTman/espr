@@ -1,0 +1,5 @@
+#Ignoring cache and checkpoint folders
+src/__pycache__/
+src/dask-worker-space/
+src/.ipynb_checkpoints/
+.vscode/
