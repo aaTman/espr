@@ -39,6 +39,7 @@ RUN set -ex \
       swig \
       xz-utils
 
+
 RUN set -ex \
     && ln -sf /usr/bin/g++-8 /usr/bin/g++ \
     && ln -sf /usr/bin/gcc-8 /usr/bin/gcc \
@@ -90,14 +91,16 @@ RUN wget https://confluence.ecmwf.int/download/attachments/45757960/eccodes-2.22
     && ctest \
     && make install 
 
-
 FROM continuumio/miniconda3
-COPY --from=eccodes_install /eccodes /share/eccodes
+
+COPY --from=eccodes_install /eccodes /eccodes
+
 COPY . /espr
+
 RUN conda config --append channels conda-forge
-
+RUN conda install --y -c conda-forge cfgrib
 RUN conda env create --name espr --file espr/requirements.yaml
-
+RUN conda install --y -c conda-forge eccodes
 RUN echo "conda activate espr" >> ~/.bashrc
 
 SHELL ["/bin/bash", "--login", "-c"]

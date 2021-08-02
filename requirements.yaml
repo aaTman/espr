@@ -194,6 +194,6 @@ dependencies:
     - yarl==1.6.3
     - zarr==2.8.3
 variables:
-  ECCODES_DEFINITION_PATH: share/eccodes/definitions
-  ECCODES_DIR: share/eccodes
+  ECCODES_DEFINITION_PATH: /eccodes/definitions
+  ECCODES_DIR: /eccodes
 prefix: /home/taylorm/.conda/envs/espr
