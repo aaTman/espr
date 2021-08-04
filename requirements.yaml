@@ -140,6 +140,7 @@ dependencies:
     - decorator==5.0.9
     - defusedxml==0.7.1
     - eccodes==1.2.0
+    - ecmwflibs==0.3.7
     - entrypoints==0.3
     - fasteners==0.16.3
     - findlibs==0.0.2

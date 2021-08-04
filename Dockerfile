@@ -98,8 +98,9 @@ COPY --from=eccodes_install /eccodes /eccodes
 COPY . /espr
 
 RUN conda config --append channels conda-forge
-RUN conda install --y -c conda-forge cfgrib
+
 RUN conda env create --name espr --file espr/requirements.yaml
+RUN conda install --y -c conda-forge cfgrib
 RUN conda install --y -c conda-forge eccodes
 RUN echo "conda activate espr" >> ~/.bashrc
 
