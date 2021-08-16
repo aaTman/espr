@@ -5,4 +5,5 @@ src/.ipynb_checkpoints
 .vscode
 
 #Ignoring Juypyter notebooks
-src/*.ipynb
+espr/*.ipynb
+test/*.ipynb

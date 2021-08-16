@@ -43,9 +43,6 @@ class ForecastArray:
         
     """
     def __init__(self, stat: str, path: str, variable: str, fhour: int, group: bool=False):
-        
-        
-        
         self.variable = self.convert_variable(variable)
         self.fhour = fhour
         self.stat = stat
@@ -56,27 +53,27 @@ class ForecastArray:
         if group == True:
             self.load_all()
 
-    def convert_variable(self, in_var):
-        if in_var in ['slp','psl','prmsl']:
-            in_var = 'prmsl'
+    def convert_variable(self, variable):
+        if variable in ['slp','psl','prmsl']:
+            self.in_var = 'prmsl'
             self.key_filter = {'typeOfLevel':'meanSea'}
-        elif in_var in ['precip','pwat']:
-            in_var = 'pwat'
+        elif variable in ['precip','pwat']:
+            self.in_var = 'pwat'
             self.key_filter = {'typeOfLevel':'unknown', 'level': 0}
-        elif in_var in ['temp','tmp','tmp850','tmp925']:
+        elif variable in ['temp','tmp','tmp850','tmp925']:
             self.short_name = 't'
-            if '925' in in_var:
+            if '925' in variable:
                 self.key_filter = {'typeOfLevel':'isobaricInhPa','level': 925, 'shortName': 't'}
-                in_var = 'tmp925'
-            elif '850' in in_var:
+                self.in_var = 'tmp925'
+            elif '850' in variable:
                 self.key_filter = {'typeOfLevel':'isobaricInhPa','level': 850, 'shortName': 't'}
-                in_var = 'tmp850'
+                self.in_var = 'tmp850'
             else:
                 raise Exception('Temperature level must be indicated (925 or 850)')
-        elif in_var in ['wnd', 'wind', 'sfc_wind', '10m_wnd', 'u10', 'v10']:
-            in_var = 'wnd'
+        elif variable in ['wnd', 'wind', 'sfc_wind', '10m_wnd', 'u10', 'v10']:
+            self.in_var = 'wnd'
             self.key_filter = {'typeOfLevel': 'heightAboveGround', 'level': 10}
-        return in_var
+        return self.in_var
 
     def _convert_stat(self):
         if self.stat in {'avg','mu'}:
@@ -88,9 +85,9 @@ class ForecastArray:
         return ['prmsl','pwat','tmp','wnd']
 
     def _map(self, data):
-        if in_var == 'prmsl':
+        if self.in_var == 'prmsl':
             data = data.rename({'prmsl':'Pressure'})
-        elif in_var == 'pwat':
+        elif self.in_var == 'pwat':
             data = data.rename({'pwat':'Precipitable_water'})
         return data
 
@@ -98,15 +95,15 @@ class ForecastArray:
         return ['sprd', 'mean']
     
     def _get_var(self, data):
-        if in_var == 'wnd':
+        if self.in_var == 'wnd':
             subset_variable = xu.sqrt(data[[n for n in data.data_vars][0]]**2+data[[n for n in data.data_vars][1]]**2)
             subset_variable = subset_variable.drop(['heightAboveGround'])
         
-        elif in_var == 'tmp925':
+        elif self.in_var == 'tmp925':
             subset_variable = data['t'] - 273.15
-        elif in_var == 'tmp850':
+        elif self.in_var == 'tmp850':
             subset_variable = data['t'] - 273.15
-        elif in_var == 'pwat':
+        elif self.in_var == 'pwat':
             subset_variable = data.drop(['level'])
         else:
             subset_variable = data
