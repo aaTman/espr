@@ -4,6 +4,6 @@ espr/dask-worker-space
 espr/.ipynb_checkpoints
 .vscode
 
-#Ignoring Juypyter notebooks
+#Ignoring Jupyter notebooks
 espr/*.ipynb
 test/*.ipynb
