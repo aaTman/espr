@@ -5,7 +5,9 @@ from datetime import datetime
 from time import sleep
 import logging
 
-logging.basicConfig(filename='output.log', level=logging.INFO)
+logging.basicConfig(filename='output.log', 
+                level=logging.INFO, 
+                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 def most_recent_dir(ftp):
     ftpdir_list = ftp.nlst()
@@ -28,7 +30,7 @@ def changemon(ftp_dir='./', sleep_time=30):
     ls_prev = set()
     while True:
         ftp = ftp_login(sleep_time=sleep_time)
-        logging.info()
+        logging.info(ftp.getresp)
         ftp.cwd(ftp_dir)
         ftp.cwd(most_recent_dir(ftp))
         ls = set(ftp.nlst())
