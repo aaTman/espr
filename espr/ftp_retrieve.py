@@ -18,7 +18,7 @@ def ftp_login(site='ftp.ncep.noaa.gov',sleep_time=30):
         ftp = FTP(site)
         ftp.login()
     except Exception as e:
-        logging.error(f'{e} error, retrying soon')
+        logging.error(f'{e} error, retrying in {sleep_time} sec...')
         sleep(sleep_time)
         ftp = FTP(site)
         ftp.login()
@@ -28,6 +28,7 @@ def changemon(ftp_dir='./', sleep_time=30):
     ls_prev = set()
     while True:
         ftp = ftp_login(sleep_time=sleep_time)
+        logging.info()
         ftp.cwd(ftp_dir)
         ftp.cwd(most_recent_dir(ftp))
         ls = set(ftp.nlst())
@@ -41,8 +42,10 @@ def notify_changes(sleep_time=30):
     for add, rem in changemon('pub/data/nccf/com/gens/prod'):
         datenow = datetime.now().strftime('%Y %m %d %H:%m')
         logging.info(f'{datenow}')
-        logging.info('\n'.join('+ %s' % str(i) for i in add))
-        logging.info('\n'.join('- %s' % str(i) for i in rem))
+        if len(add) > 0:
+            logging.info('\n'.join('+ %s' % str(i) for i in add))
+        if len(rem) > 0:
+            logging.info('\n'.join('- %s' % str(i) for i in rem))
         sleep(sleep_time)
 
 if __name__ == '__main__':
