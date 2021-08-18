@@ -5,7 +5,7 @@ from datetime import datetime
 from time import sleep
 import logging
 
-logging.basicConfig(filename='output.log', level=logging.WARNING)
+logging.basicConfig(filename='output.log', level=logging.INFO)
 
 def most_recent_dir(ftp):
     ftpdir_list = ftp.nlst()
@@ -30,7 +30,7 @@ def changemon(ftp_dir='./', sleep_time=30):
         ftp = ftp_login(sleep_time=sleep_time)
         ftp.cwd(ftp_dir)
         ftp.cwd(most_recent_dir(ftp))
-        ls = set(ftp.nlst(ftp_dir))
+        ls = set(ftp.nlst())
         ftp.quit()
         add, rem = ls-ls_prev, ls_prev-ls
         if add or rem: yield add, rem
@@ -40,9 +40,9 @@ def changemon(ftp_dir='./', sleep_time=30):
 def notify_changes(sleep_time=30):
     for add, rem in changemon('pub/data/nccf/com/gens/prod'):
         datenow = datetime.now().strftime('%Y %m %d %H:%m')
-        logging.warning(f'{datenow}')
-        logging.warning('\n'.join('+ %s' % str(i) for i in add))
-        logging.warning('\n'.join('- %s' % str(i) for i in rem))
+        logging.info(f'{datenow}')
+        logging.info('\n'.join('+ %s' % str(i) for i in add))
+        logging.info('\n'.join('- %s' % str(i) for i in rem))
         sleep(sleep_time)
 
 if __name__ == '__main__':
