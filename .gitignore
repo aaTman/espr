@@ -1,7 +1,7 @@
 #Ignoring cache and checkpoint folders
-src/__pycache__
-src/dask-worker-space
-src/.ipynb_checkpoints
+espr/__pycache__
+espr/dask-worker-space
+espr/.ipynb_checkpoints
 .vscode
 
 #Ignoring Juypyter notebooks
