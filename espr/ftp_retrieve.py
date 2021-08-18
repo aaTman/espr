@@ -9,7 +9,8 @@ logging.basicConfig(filename='output.log', level=logging.WARNING)
 
 def most_recent_dir(ftp):
     ftpdir_list = ftp.nlst()
-    new_dir = max([int(re.search(r'\d+', ftpdir).group()) for ftpdir in ftpdir_list])
+    new_dir_int = max([int(re.search(r'\d+', ftpdir).group()) for ftpdir in ftpdir_list])
+    new_dir = [n for n in ftpdir_list if str(new_dir_int) in n][0]
     return new_dir
 
 def ftp_login(site='ftp.ncep.noaa.gov',sleep_time=30):
@@ -25,10 +26,9 @@ def ftp_login(site='ftp.ncep.noaa.gov',sleep_time=30):
 
 def changemon(ftp_dir='./', sleep_time=30):
     ls_prev = set()
-
     while True:
         ftp = ftp_login(sleep_time=sleep_time)
-        ftp.cwd(most_recent_dir(ftp))
+        ftp.cwd(ftp_dir)
         ftp.cwd(most_recent_dir(ftp))
         ls = set(ftp.nlst(ftp_dir))
         ftp.quit()
