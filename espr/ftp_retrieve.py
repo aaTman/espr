@@ -30,7 +30,7 @@ def changemon(ftp_dir='./', sleep_time=30):
     ls_prev = set()
     while True:
         ftp = ftp_login(sleep_time=sleep_time)
-        logging.info(ftp.getresp)
+        logging.info(ftp.lastresp)
         ftp.cwd(ftp_dir)
         ftp.cwd(most_recent_dir(ftp))
         ls = set(ftp.nlst())
