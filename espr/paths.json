@@ -3,7 +3,7 @@
     "ftp" : "ftp.ncep.noaa.gov",
     "ftp_dir" : "pub/data/nccf/com/gens/prod/",
     "data_store" : "/E1/taylorm/espr/temp/",
-    "rfcst" : "/E1/taylorm/espr/reforecast/",
+    "rfcst" : "/E1/taylorm/espr/reforecasts/",
     "fpath" : "/E1/taylorm/espr/misc/comfortaa/Comfortaa-Regular.ttf",
     "fpath_bold" : "/E1/taylorm/espr/misc/comfortaa/Comfortaa-Bold.ttf",
     "plot_dir" : "/E1/taylorm/espr/images/",

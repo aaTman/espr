@@ -1,0 +1,53 @@
+{
+    "slp" : { 
+        "latitude" :  { 
+            "lower" : 20,
+            "upper" : 65
+        },
+        "longitude" : {
+            "start" : 180,
+            "end" : 310
+        },
+        "forecast_hours" : {
+            "begin" : 3,
+            "end" : 168,
+            "step" : 3
+        },
+        "resolution" : 0.25,
+        "dask" : "True"
+    },
+    "tcc" : { 
+        "latitude" :  { 
+            "lower" : 20,
+            "upper" : 65
+        },
+        "longitude" : {
+            "start" : 180,
+            "end" : 310
+        },
+        "forecast_hours" : {
+            "begin" : 3,
+            "end" : 168,
+            "step" : 3
+        },
+        "resolution" : 0.25,
+        "dask" : "True"
+    },
+    "dswrf" : { 
+        "latitude" :  { 
+            "lower" : 20,
+            "upper" : 65
+        },
+        "longitude" : {
+            "start" : 180,
+            "end" : 310
+        },
+        "forecast_hours" : {
+            "begin" : 3,
+            "end" : 168,
+            "step" : 3
+        },
+        "resolution" : 0.25,
+        "dask" : "True"
+    }
+}
