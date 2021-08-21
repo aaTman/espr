@@ -7,7 +7,7 @@ import logging
 
 logging.basicConfig(filename='output.log', 
                 level=logging.INFO, 
-                format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+                format='%(asctime)s - %(levelname)s - %(message)s')
 
 def most_recent_dir(ftp):
     ftpdir_list = ftp.nlst()
@@ -26,7 +26,7 @@ def ftp_login(site='ftp.ncep.noaa.gov',sleep_time=30):
         ftp.login()
     return ftp
 
-def changemon(ftp_dir='./', sleep_time=30):
+def ftp_change(ftp_dir='./', sleep_time=30):
     ls_prev = set()
     while True:
         ftp = ftp_login(sleep_time=sleep_time)
@@ -41,7 +41,7 @@ def changemon(ftp_dir='./', sleep_time=30):
         sleep(sleep_time)
 
 def notify_changes(sleep_time=30):
-    for add, rem in changemon('pub/data/nccf/com/gens/prod'):
+    for add, rem in ftp_change('pub/data/nccf/com/gens/prod'):
         datenow = datetime.now().strftime('%Y %m %d %H:%m')
         logging.info(f'{datenow}')
         if len(add) > 0:
@@ -49,6 +49,8 @@ def notify_changes(sleep_time=30):
         if len(rem) > 0:
             logging.info('\n'.join('- %s' % str(i) for i in rem))
         sleep(sleep_time)
+    datenow = datetime.now().strftime('%Y %m %d %H:%m')
+    logging.info(f'exiting script at {datenow}')
 
 if __name__ == '__main__':
     notify_changes()
