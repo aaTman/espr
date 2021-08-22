@@ -1,7 +1,6 @@
 import numpy as np
 import os 
-from datetime import datetime, timedelta 
-import paths as ps 
+from datetime import datetime, timedelta
 import subprocess
 import shutil
 import matplotlib.pyplot as plt
