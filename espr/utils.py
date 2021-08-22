@@ -5,18 +5,7 @@ import subprocess
 import shutil
 import matplotlib.pyplot as plt
 from mpl_toolkits import axes_grid1
-import logging
-
-def setup_logger(name, log_file, level=logging.INFO):
-    
-    handler = logging.FileHandler(log_file)        
-    handler.setFormatter(formatter)
-
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
-    logger.addHandler(handler)
-
-    return logger
+import json
 
 def replace_year(x, year):
     """ Year must be a leap year for this to work """
@@ -48,13 +37,14 @@ def add_colorbar(im, aspect=20, pad_fraction=0.5, **kwargs):
     return im.axes.figure.colorbar(im, cax=cax, **kwargs)
 
 def cleaner():
-
+    paths = json.load('paths.json')
+    plot_dir = paths['plot_dir']
     # for file_name in os.listdir(ps.output_dir):
     #     if (datetime.now() - datetime.strptime(file_name[0:11],'%Y%m%d_%H')).total_seconds() > 604800:
     #         os.remove(f'{ps.output_dir}{file_name}')
-    for file_name in os.listdir(ps.plot_dir):
+    for file_name in os.listdir(plot_dir):
         if (datetime.now() - datetime.strptime(file_name[0:11],'%Y%m%d_%H')).total_seconds() > 604800:
-           shutil.rmtree(f'{ps.plot_dir}{file_name}')
+           shutil.rmtree(f'{plot_dir}{file_name}')
 
 def scp_call(source, dest):
     subprocess.call(['scp','-r',source,dest],stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
