@@ -12,3 +12,5 @@ test/*.ipynb
 reforecasts/tcc/*
 reforecasts/dswrf/*
 reforecasts/slp/*
+
+notebooks/*

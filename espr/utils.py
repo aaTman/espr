@@ -26,12 +26,12 @@ def replace_year(x, year):
 
     # Due to leap years calculate offset of 1 day for those days in non-leap year
     yr_mn = x.astype('M8[Y]') + np.timedelta64(59,'D')
-    leap_day_offset = (yr_mn.astype('M8[M]') - yr_mn.astype('M8[Y]') - 1).astype(np.int)
+    leap_day_offset = (yr_mn.astype('M8[M]') - yr_mn.astype('M8[Y]') - 1).astype(int)
 
     # However, due to days in non-leap years prior March-01, 
     # correct for previous step by removing an extra day
-    non_leap_yr_beforeMarch1 = (x.astype('M8[D]') - x.astype('M8[Y]')).astype(np.int) < 59
-    non_leap_yr_beforeMarch1 = np.logical_and(non_leap_yr_beforeMarch1, leap_day_offset).astype(np.int)
+    non_leap_yr_beforeMarch1 = (x.astype('M8[D]') - x.astype('M8[Y]')).astype(int) < 59
+    non_leap_yr_beforeMarch1 = np.logical_and(non_leap_yr_beforeMarch1, leap_day_offset).astype(int)
     day_offset = np.datetime64('1970') - (leap_day_offset - non_leap_yr_beforeMarch1).astype('M8[D]')
 
     # Finally, apply the day offset 

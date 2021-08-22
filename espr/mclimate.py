@@ -128,10 +128,10 @@ class MClimate:
         date_range = ut.replace_year(np.arange(d64-self.period,d64+self.period+1), 2012)
         days = date_range - date_range.astype('datetime64[M]') + 1
         months = date_range.astype('datetime64[M]').astype(int) % 12 + 1
-        centered_date_str = np.char.add(months.astype(np.str),
-        days.astype(int).astype(np.str))
-        date_str = np.char.add(ds.time.dt.month.values.astype(np.str),
-        ds.time.dt.day.values.astype(np.str))
+        centered_date_str = np.char.add(months.astype(str),
+                                        days.astype(int).astype(str))
+        date_str = np.char.add(ds.time.dt.month.values.astype(str),
+        ds.time.dt.day.values.astype(str))
         ds_subset = ds.assign_coords(timestr=('time',date_str))
         ds_subset = ds_subset.where(ds_subset.timestr.isin(centered_date_str),drop=True)
         return ds_subset
