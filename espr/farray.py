@@ -4,7 +4,6 @@ import xarray.ufuncs as xu
 import bottleneck
 import datetime
 import os
-import paths as ps
 import utils as ut
 import plot
 import subprocess

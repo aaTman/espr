@@ -3,7 +3,6 @@ import cartopy.feature as cf
 import matplotlib.pyplot as plt 
 import matplotlib.font_manager as fm
 import matplotlib.colors as mc
-import paths as ps 
 import numpy as np
 import xarray as xr
 from mpl_toolkits.axes_grid1 import make_axes_locatable

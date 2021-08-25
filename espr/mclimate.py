@@ -82,7 +82,7 @@ class MClimate:
         self.client = Client()
     
     def var_list(self) -> list:
-        return ['slp','pwat','tmp925','tmp850','wnd']
+        return ['slp','pwat','tmp925','tmp850','wnd', 'tcc', 'dswrf']
     
     def _convert_variable(self):
         if 'slp' or 'psl' in self.variable:
@@ -113,7 +113,7 @@ class MClimate:
         if self.date.month in son:
             return 'son'
 
-    def subset_time(self, ds):
+    def subset_time(self):
         '''
         Subsets the date range to within 21 days +- the valid date.
         This method is ~ 3x faster than using an xr.concat method which
@@ -128,13 +128,19 @@ class MClimate:
         date_range = ut.replace_year(np.arange(d64-self.period,d64+self.period+1), 2012)
         days = date_range - date_range.astype('datetime64[M]') + 1
         months = date_range.astype('datetime64[M]').astype(int) % 12 + 1
-        centered_date_str = np.char.add(months.astype(str),
-                                        days.astype(int).astype(str))
-        date_str = np.char.add(ds.time.dt.month.values.astype(str),
-        ds.time.dt.day.values.astype(str))
-        ds_subset = ds.assign_coords(timestr=('time',date_str))
-        ds_subset = ds_subset.where(ds_subset.timestr.isin(centered_date_str),drop=True)
-        return ds_subset
+        years = np.arange(2000,2020).astype(str)
+        if self.v12:
+            centered_date_str = np.char.add(np.array([n.zfill(2) for n in months.astype(int).astype(str)]).T,
+                                            np.array([n.zfill(2) for n in days.astype(int).astype(str)]).T)
+            full_date_list = np.array([n+m for n in years for m in centered_date_str]).T
+            stat_list = [n for n in os.listdir(self.path) if self.stat in n]
+            subset_stat_list = [n for n in stat_list if any(m in n for m in full_date_list)]
+            subset_mean_list_full_path = [f'{self.path}/{n}' for n in subset_stat_list]
+            return subset_mean_list_full_path
+        else:
+            centered_date_str = np.char.add(months.astype(str),
+                                            days.astype(int).astype(str))
+            return centered_date_str
     
     def set_data_path(self, stat: str, custom: typing.Optional[str] = None):
         '''
@@ -149,6 +155,8 @@ class MClimate:
         custom: str
             If custom path desired, enter path here (fstrings included).
         '''
+        if self.v12:
+            return self.subset_time()
         if custom is not None:
             return custom
         else:
@@ -159,10 +167,7 @@ class MClimate:
     
     def open_xr_dataset(self, data_path: str, arg_dict: dict):
         if self.v12:
-            import pdb; pdb.set_trace
             ds = xr.open_mfdataset(data_path, **arg_dict)
-            ds = ds.rename({'time':'fhour'}).rename({'date':'time'})
-            ds['time'] = [np.datetime64(n[0:4]+'-'+n[4:6]+'-'+n[6:8]) for n in ds['time'].values]
             return ds
         else:
             return xr.open_mfdataset(data_path, **arg_dict)
@@ -171,6 +176,11 @@ class MClimate:
         arg_dict = {}
         assert stat in ['mean','sprd'], 'stat must be mean or sprd'
         data_path = self.set_data_path(stat)
+        if self.v12:
+            arg_dict['combine'] = 'nested'
+            arg_dict['concat_dim']='date'
+            arg_dict['coords']='minimal'
+            arg_dict['compat']='override'
         if self.dask_enabled:
             arg_dict['chunks'] = {}
         if self.variable == 'wnd':
@@ -194,9 +204,18 @@ class MClimate:
                 ds = ds.sel(fhour=np.timedelta64(self.fhour,'h'))
             except KeyError:
                 ds = ds.sel(fhour=self.fhour)
+
         # year_values = ds.time.values.astype('datetime64[Y]').astype(int) + 1970
         self.ds_test = ds
-        ds = self.subset_time(ds)
+        if self.v12:
+            pass
+        else:
+            date_ = self.subset_time(ds)
+            date_str = np.char.add(ds.time.dt.month.values.astype(str),
+            ds.time.dt.day.values.astype(str))
+            ds= ds.assign_coords(timestr=('time',date_str))
+            ds = ds.where(ds.timestr.isin(date_),drop=True)
+            
         # if self.fhour:
         #     ds = ds.drop(['intTime', 'intValidTime', 'fhour'])
         # else:
@@ -218,7 +237,8 @@ class MClimate:
             If true, will load xarray into memory. Only use if there is 
             sufficient memory to handle the netcdf.
         '''
-        xarr = self.retrieve_from_xr(stat, subset_fhour)
+        self.stat = stat
+        xarr = self.retrieve_from_xr(self.stat, subset_fhour)
         if load:
             return xarr.load()
         else:   
