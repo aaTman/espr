@@ -7,6 +7,11 @@ import matplotlib.pyplot as plt
 from mpl_toolkits import axes_grid1
 import json
 
+def load_paths():
+    f = open('paths.json',)
+    paths = json.load(f)
+    return paths
+
 def replace_year(x, year):
     """ Year must be a leap year for this to work """
     # Add number of days x is from JAN-01 to year-01-01 

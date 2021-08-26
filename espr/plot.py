@@ -8,16 +8,18 @@ import xarray as xr
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import os
 from datetime import datetime
+import utils as ut
 
 class Map:
     def __init__(self, hsa, input_map, variable, model_date, dpi=72):
+        self.paths = ut.load_paths()
         self.variable = variable
         self.dpi = dpi
         self.model_date = model_date
         self.hsa = self._convert_to_da(hsa)
         self.input_map = self._convert_to_da(input_map)
-        self.font = fm.FontProperties(fname=ps.fpath)
-        self.font_bold = fm.FontProperties(fname=ps.fpath_bold)
+        self.font = fm.FontProperties(fname=self.paths['fpath'])
+        self.font_bold = fm.FontProperties(fname=self.paths['fpath_bold'])
         self.levels = np.linspace(-3,3,13)
         self.variable_range = self._set_variable_range()
         self._generate_map()
@@ -131,16 +133,16 @@ class Map:
         fontsize=14,
         loc='right')
         try:
-            os.mkdir(f'{ps.plot_dir}{self.model_date.strftime("%Y%m%d_%H")}')
+            os.mkdir(f'{self.paths["plot_dir"]}{self.model_date.strftime("%Y%m%d_%H")}')
         except FileExistsError:
             pass
         try:
-            plt.savefig(f'{ps.plot_dir}{self.model_date.strftime("%Y%m%d_%H")}/{self.variable}_{step:.0f}.png',bbox_inches='tight',dpi=150) 
+            plt.savefig(f'{self.paths["plot_dir"]}{self.model_date.strftime("%Y%m%d_%H")}/{self.variable}_{step:.0f}.png',bbox_inches='tight',dpi=150) 
         except ValueError:
             self.input_map = self.input_map.fillna(0)
             self.hsa = self.hsa.fillna(0)
             print(self.input_map.max(), self.input_map.min())
             print(self.hsa.max(), self.hsa.min())
-            plt.savefig(f'{ps.plot_dir}{self.model_date.strftime("%Y%m%d_%H")}/{self.variable}_{step:.0f}.png',bbox_inches='tight',dpi=self.dpi)        
+            plt.savefig(f'{self.paths["plot_dir"]}{self.model_date.strftime("%Y%m%d_%H")}/{self.variable}_{step:.0f}.png',bbox_inches='tight',dpi=self.dpi)        
         plt.close('all')    
 

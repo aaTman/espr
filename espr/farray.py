@@ -8,6 +8,7 @@ import utils as ut
 import plot
 import subprocess
 import logging
+import json
 
 class ForecastArray:
     """
@@ -41,10 +42,12 @@ class ForecastArray:
         Default is 10.
         
     """
+
     def __init__(self, stat: str, path: str, variable: str, fhour: int, group: bool=False):
         self.variable = self.convert_variable(variable)
         self.fhour = fhour
         self.stat = stat
+        self.paths = ut.load_paths()
         if self.stat in self._stat_list():
             pass
         else:
@@ -122,9 +125,9 @@ class ForecastArray:
   
     def load_forecast(self, subset_lat=None, subset_lon=None):
         try:
-            new_gefs = xr.open_dataset(f'{ps.data_store}gefs_{self.stat}_{self.fhour:03}.grib2',engine='cfgrib',backend_kwargs=dict(filter_by_keys=self.key_filter,indexpath=''))
+            new_gefs = xr.open_dataset(f'{self.paths['data_store']}gefs_{self.stat}_{self.fhour:03}.grib2',engine='cfgrib',backend_kwargs=dict(filter_by_keys=self.key_filter,indexpath=''))
         except KeyError:
-            new_gefs = xr.open_dataset(f'{ps.data_store}gefs_{self.stat}_{self.fhour:03}.grib2',engine='cfgrib',backend_kwargs=dict(filter_by_keys=self.key_filter,indexpath=''))
+            new_gefs = xr.open_dataset(f'{self.paths['data_store']}gefs_{self.stat}_{self.fhour:03}.grib2',engine='cfgrib',backend_kwargs=dict(filter_by_keys=self.key_filter,indexpath=''))
         subset_gefs = self._get_var(new_gefs)
         subset_gefs = self._rename_latlon(new_gefs)
         try:
@@ -138,7 +141,7 @@ class ForecastArray:
 
     def load_all(self, subset_lat=None, subset_lon=None):
         try:
-            new_gefs = xr.open_mfdataset(f'{ps.data_store}*{self.stat}*.grib2',
+            new_gefs = xr.open_mfdataset(f'{self.paths['data_store']}*{self.stat}*.grib2',
             engine='cfgrib',
             combine='nested',
             concat_dim='time',
@@ -146,7 +149,7 @@ class ForecastArray:
             )
         except KeyError:
             import cfgrib
-            new_gefs = cfgrib.open_datasets(f'{ps.data_store}gefs_mean_000.grib2')
+            new_gefs = cfgrib.open_datasets(f'{self.paths['data_store']}gefs_mean_000.grib2')
         subset_gefs = self._get_var(new_gefs)
         subset_gefs = self._rename_latlon(new_gefs)
         try:
