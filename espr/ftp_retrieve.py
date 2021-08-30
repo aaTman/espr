@@ -5,10 +5,12 @@ from datetime import datetime
 from time import sleep
 import logging
 import numpy as np
+import sys
 
 logging.basicConfig(filename='output.log', 
                 level=logging.INFO, 
                 format='%(asctime)s - %(levelname)s - %(message)s')
+logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
 def most_recent_dir(ftp):
     ftpdir_list = ftp.nlst()
@@ -37,7 +39,7 @@ def ftp_change(ftp_dir='./', sleep_time=30):
         ls = set(ftp.nlst())
         ftp.quit()
         add, rem = ls-ls_prev, ls_prev-ls
-        if add or rem: yield add, rem
+        if add or rem: yield add, rem, ftp
         ls_prev = ls
         sleep(sleep_time)
 
@@ -47,16 +49,49 @@ def notify_changes(sleep_time=30):
         logging.info(f'{datenow}')
         if len(add) > 0:
             logging.info('\n'.join('+ %s' % str(i) for i in add))
-            retr_files(add)
+            retr_files(add, ftp, ftpdir='pub/data/nccf/com/gens/prod')
         if len(rem) > 0:
             logging.info('\n'.join('- %s' % str(i) for i in rem))
         sleep(sleep_time)
     datenow = datetime.now().strftime('%Y %m %d %H:%m')
     logging.info(f'exiting script at {datenow}')
 
-def retr_files(add):
+def loop_and_download(stat, fhours, ftp, http=True, query_dict={}):
+    assert stat in ['mean','sprd']; 'stat must be mean or sprd'
+    if stat == 'mean':
+        gestat = 'geavg'
+        save_name = 'mean'
+    file_valid_list = [n for n in file_list if np.logical_and('geavg' in n, '.idx' not in n)]
+    file_valid_list = [n for n in file_valid_list if np.logical_and(int(n[-3:]) <= 168, int(n[-3:]) % 6 == 0)]
+    file_valid_list = [n for n in file_valid_list if '011ab' not in n]
+    for n in file_valid_list:
+        fname = 'gefs_mean_'+n[-3:]+'.grib2'
+        try:
+            with open(fname, 'wb') as f:
+                # Define the callback as a closure so it can access the opened 
+                # file in local scope
+                def callback(data):
+                    f.write(data)
+                ftp.retrbinary(f'RETR {fname}', callback)
+        except Exception as e:
+            logging.error(f'{n} failure, {e}')
+            pass
+
+def retr_files(add, ftp, ftpdir='/'):
     ftp = ftp_login()
-    ftp.cwd(most_recent_dir(ftp))
+    ftp.cwd(ftpdir)
+    import pdb; pdb.set_trace()
+    while True:
+        try:
+            ftp.cwd(most_recent_dir(ftp))
+        except AttributeError:
+            continue
+    if 'atmos' in ftp.nlst():
+        ftp.cwd('atmos')
+    if 'pgrb2sp25' in ftp.nlst():
+        ftp.cwd('pgrb2sp25')
+    assert 'pgrb2sp25' in ftp.pwd(); f'not in file directory, currently in {ftp.pwd()}'
+    file_list = ftp.nlst()
     file_valid_list = [n for n in file_list if np.logical_and('geavg' in n, '.idx' not in n)]
     file_valid_list = [n for n in file_valid_list if np.logical_and(int(n[-3:]) <= 168, int(n[-3:]) % 6 == 0)]
     file_valid_list = [n for n in file_valid_list if '011ab' not in n]
