@@ -56,6 +56,10 @@ def notify_changes(sleep_time=30):
     datenow = datetime.now().strftime('%Y %m %d %H:%m')
     logging.info(f'exiting script at {datenow}')
 
+def link_builder(query_dict):
+    assert 'lat' in query_dict; 'latitude must be in dict'
+    assert 'lon' in query_dict; 'longitude must be in dict'
+    
 def loop_and_download(stat, fhours, ftp, http=True, query_dict={}):
     assert stat in ['mean','sprd']; 'stat must be mean or sprd'
     if stat == 'mean':
