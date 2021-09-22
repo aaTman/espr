@@ -91,17 +91,6 @@ class GEFSRetrieve:
         new_dir = [n for n in ftpdir_list if str(new_dir_int) in n][0]
         return new_dir
 
-    def ftp_login(self, site='ftp.ncep.noaa.gov'):
-        try:
-            ftp = FTP(site)
-            ftp.login()
-        except Exception as e:
-            logging.error(f'{e} error, retrying in {self.monitor_interval} sec...')
-            sleep(self.monitor_interval)
-            ftp = FTP(site)
-            ftp.login()
-        return ftp
-
     def most_recent(self, type_return):
         assert type_return in ['ens', 'mean', 'sprd'], 'type_return must be ens, mean, or sprd'
         base_url = 'https://nomads.ncep.noaa.gov/pub/data/nccf/com/gens/prod/'
@@ -149,48 +138,56 @@ class GEFSRetrieve:
         self.build_query_dict()
         self.build_ensemble_dict()
         base_link = 'https://nomads.ncep.noaa.gov/cgi-bin/filter_gefs_atmos_0p25s.pl?'
-        base_query = f"{base_link}{''.join([f'{self.query_dict[n]}' for n in self.query_dict])}"
-        date_link = f'&dir=%2Fgefs.{self.date_value}%2F{self.hour_value}%2Fatmos%2Fpgrb2sp25&'
+        base_query = f"{base_link}{''.join([f'{self.query_dict[n]}' for n in self.query_dict])}subregion=&"
+        date_link = f'dir=%2F{self.date_value.strip("/")}%2F{self.hour_value.strip("/")}%2Fatmos%2Fpgrb2sp25&'
         new_link = base_query + date_link
-        self.ens_fhour_links = [f"{new_link}file={self.ensemble_dict['ensembles'][m]}.t00z.pgrb2s.0p25.f{n:03}" for n in np.arange(0,self.hour_end+1,self.freq) for m in self.ensemble_dict['ensembles']]
-        self.mean_fhour_links = [f"{new_link}file={self.ensemble_dict['mean']}.t00z.pgrb2s.0p25.f{n:03}" for n in np.arange(0,self.hour_end+1,self.freq)]
-        self.sprd_fhour_links = [f"{new_link}file={self.ensemble_dict['sprd']}.t00z.pgrb2s.0p25.f{n:03}" for n in np.arange(0,self.hour_end+1,self.freq)]
+        self.ens_fhour_links = [f"{new_link}file={self.ensemble_dict['ensembles'][m]}.t{self.hour_value.strip('/')}z.pgrb2s.0p25.f{n:03}" for n in np.arange(0,self.hour_end+1,self.freq) for m in self.ensemble_dict['ensembles']]
+        self.mean_fhour_links = [f"{new_link}file={self.ensemble_dict['mean']}.t{self.hour_value.strip('/')}z.pgrb2s.0p25.f{n:03}" for n in np.arange(0,self.hour_end+1,self.freq)]
+        self.sprd_fhour_links = [f"{new_link}file={self.ensemble_dict['sprd']}.t{self.hour_value.strip('/')}z.pgrb2s.0p25.f{n:03}" for n in np.arange(0,self.hour_end+1,self.freq)]
 
     def watch(self):
         assert self.monitor, 'monitor not enabled, set monitor to True'
         self.most_recent_monitor()
 
-    # def ftp_change(self, ftp_dir='./'):
-    #     ls_prev = set()
-    #     while True:
-    #         ftp = self.ftp_login(sleep_time=self.monitor_interval)
-    #         logging.info(ftp.lastresp)
-    #         ftp.cwd(ftp_dir)
-    #         ftp.cwd(self.most_recent_dir(ftp))
-    #         ls = set(ftp.nlst())
-    #         ftp.quit()
-    #         add, rem = ls-ls_prev, ls_prev-ls
-    #         if add or rem: yield add, rem, ftp
-    #         ls_prev = ls
-    #         sleep(self.monitor_interval)
-
-    # def notify_changes(self):
-    #     for add, rem, ftp in self.ftp_change('pub/data/nccf/com/gens/prod'):
-    #         datenow = datetime.now().strftime('%Y %m %d %H:%m')
-    #         logging.info(f'{datenow}')
-    #         if len(add) > 0:
-    #             logging.info('\n'.join('+ %s' % str(i) for i in add))
-    #             self.link_builder()
-    #         if len(rem) > 0:
-    #             logging.info('\n'.join('- %s' % str(i) for i in rem))
-    #         sleep(self.monitor_interval)
-    #     datenow = datetime.now().strftime('%Y %m %d %H:%m')
-    #     logging.info(f'exiting script at {datenow}')
+    ##todo: include ftp as backup
+    def ftp_login(self, site='ftp.ncep.noaa.gov'):
+        try:
+            ftp = FTP(site)
+            ftp.login()
+        except Exception as e:
+            logging.error(f'{e} error, retrying in {self.monitor_interval} sec...')
+            sleep(self.monitor_interval)
+            ftp = FTP(site)
+            ftp.login()
+        return ftp
     
+    def ftp_change(self, ftp_dir='./'):
+        ls_prev = set()
+        while True:
+            ftp = self.ftp_login(sleep_time=self.monitor_interval)
+            logging.info(ftp.lastresp)
+            ftp.cwd(ftp_dir)
+            ftp.cwd(self.most_recent_dir(ftp))
+            ls = set(ftp.nlst())
+            ftp.quit()
+            add, rem = ls-ls_prev, ls_prev-ls
+            if add or rem: yield add, rem, ftp
+            ls_prev = ls
+            sleep(self.monitor_interval)
 
-        
+# def notify_changes(self):
+#     for add, rem, ftp in self.ftp_change('pub/data/nccf/com/gens/prod'):
+#         datenow = datetime.now().strftime('%Y %m %d %H:%m')
+#         logging.info(f'{datenow}')
+#         if len(add) > 0:
+#             logging.info('\n'.join('+ %s' % str(i) for i in add))
+#             self.link_builder()
+#         if len(rem) > 0:
+#             logging.info('\n'.join('- %s' % str(i) for i in rem))
+#         sleep(self.monitor_interval)
+#     datenow = datetime.now().strftime('%Y %m %d %H:%m')
+#     logging.info(f'exiting script at {datenow}')
 
-    
 # def loop_and_download(stat, fhours, ftp, http=True, query_dict={}):
 #     assert stat in ['mean','sprd']; 'stat must be mean or sprd'
 #     if stat == 'mean':
