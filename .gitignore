@@ -7,10 +7,11 @@ espr/.ipynb_checkpoints
 #Ignoring Jupyter notebooks
 espr/*.ipynb
 test/*.ipynb
+notebooks/
 
 #Ignoring reforecast data folders
-reforecasts/tcc/*
-reforecasts/dswrf/*
-reforecasts/slp/*
+reforecasts/
 
-notebooks/*
+#Ignoring analysis folders
+analysis/
+
