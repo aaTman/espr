@@ -9,7 +9,12 @@ import numpy as np
 import sys
 import requests
 from bs4 import BeautifulSoup
-
+import asyncio
+from espr import utils 
+import aiohttp
+import aiofiles
+import requests
+import time
 logging.basicConfig(filename='gefs_retrieval.log', 
                 level=logging.INFO, 
                 format='%(asctime)s - %(levelname)s - %(message)s')
@@ -62,7 +67,8 @@ class GEFSRetrieve:
         self.longitude_bounds = longitude_bounds
         self.freq = freq
         self.hour_end = hour_end
-
+        self.sem = 10
+        self.download_dir = os.getcwd()
     def variable_store(self):
         return ['APCP', 'CAPE', 'CFRZR', 'CICEP', 'CIN', 'CRAIN', 'CSNOW', 
         'DLWRF', 'DPT', 'DSWRF', 'GUST', 'HLCY', 'ICETK', 'LHTFL', 'PRES', 
@@ -91,19 +97,29 @@ class GEFSRetrieve:
         new_dir = [n for n in ftpdir_list if str(new_dir_int) in n][0]
         return new_dir
 
-    def most_recent(self, type_return):
+    def return_most_recent_links(self, type_return):
         assert type_return in ['ens', 'mean', 'sprd'], 'type_return must be ens, mean, or sprd'
         base_url = 'https://nomads.ncep.noaa.gov/pub/data/nccf/com/gens/prod/'
         atmos_pgrb = 'atmos/pgrb2sp25/'
         date_base_set = set()
-        level, changes = self.request_to_bs(base_url, date_base_set)
+        level, changes = self.request_to_bs4(base_url, date_base_set)
         modelhour_base_set = set()
         if changes:
             self.date_value = max(changes)
-            level, changes = self.request_to_bs(level, modelhour_base_set)  
-            if changes: 
-                self.hour_value = max(changes)
+            level, changes_model_hour = self.request_to_bs4(level, modelhour_base_set)  
+            if changes_model_hour: 
+                self.hour_value = max(changes_model_hour)
                 self.link_builder()
+        file_exists = utils.req_status_bool(self.mean_fhour_links[-1])
+        if file_exists:
+            pass
+        elif changes_model_hour == '18/':
+            self.hour_value = '12/'
+            self.link_builder()
+        elif changes_model_hour == '00/':
+            self.date_value = sorted(changes)[-2]
+            self.hour_value = '18/'
+            self.link_builder()
         if type_return == 'ens':
             return self.ens_fhour_links
         elif type_return == 'mean':
@@ -116,20 +132,23 @@ class GEFSRetrieve:
         atmos_pgrb = 'atmos/pgrb2sp25/'
         date_base_set = set()
         while True:
-            level, changes = self.request_to_bs(base_url, date_base_set)
+            level, changes = self.request_to_bs4(base_url, date_base_set)
             modelhour_base_set = set()
             if changes:
                 self.date_value = list(changes)[0]
-                level, changes = self.request_to_bs(level, modelhour_base_set)  
+                level, changes = self.request_to_bs4(level, modelhour_base_set)  
                 if changes: 
                     self.hour_value = list(changes)[0]
                     self.link_builder()
 
-    def request_to_bs(self, url, in_set):
+    def request_to_bs4(self, url, in_set):
         page = requests.get(url).text
         soup = BeautifulSoup(page, 'html.parser')
         links = set([a['href'] for a in soup.find_all('a',href=True)])
-        most_recent = max(links)
+        try:
+            most_recent = max(links)
+        except ValueError:
+            print('error in response, no links present')
         recursion_url = f'{url}{most_recent}'
         changes = links - in_set
         return recursion_url, changes
@@ -148,7 +167,7 @@ class GEFSRetrieve:
     def watch(self):
         assert self.monitor, 'monitor not enabled, set monitor to True'
         self.most_recent_monitor()
-
+   
     ##todo: include ftp as backup
     def ftp_login(self, site='ftp.ncep.noaa.gov'):
         try:
@@ -174,6 +193,29 @@ class GEFSRetrieve:
             if add or rem: yield add, rem, ftp
             ls_prev = ls
             sleep(self.monitor_interval)
+
+    async def download_link(self, link):
+        async with aiohttp.ClientSession() as session:
+                async with session.get(link, timeout=0) as resp:
+                    if resp.status < 400: 
+                        content = await resp.read()    
+                        if sys.getsizeof(content) < 100:
+                            await asyncio.sleep(1)
+                            content = await resp.read()       
+                        with open(f'{self.download_dir}/{link.split("=")[-1]}', mode='+wb') as f:
+                            f.write(content)
+        
+
+    async def download_links(self):
+        mean_links = self.return_most_recent_links('mean')
+        sprd_links = self.return_most_recent_links('sprd')
+        links = mean_links + sprd_links
+        coro = [self.download_link(link) for link in links]
+        await utils.gather_with_concurrency(self.sem, *coro)
+
+    def download_files_async(self):
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(self.download_links())
 
 # def notify_changes(self):
 #     for add, rem, ftp in self.ftp_change('pub/data/nccf/com/gens/prod'):
