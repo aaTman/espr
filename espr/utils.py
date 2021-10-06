@@ -9,6 +9,13 @@ import json
 import asyncio
 import requests
 
+def str_to_bool(s: str):
+    s = s.lower()
+    if s in ['y','yes','ye']:
+        return True
+    else:
+        return False
+
 async def gather_with_concurrency(n, *tasks):
     semaphore = asyncio.Semaphore(n)
 
@@ -25,7 +32,7 @@ def load_paths():
 def req_status_bool(link):
     page = requests.get(link)
     return page.ok
-    
+
 def replace_year(x, year):
     """ Year must be a leap year for this to work """
     # Add number of days x is from JAN-01 to year-01-01 

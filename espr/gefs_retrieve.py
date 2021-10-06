@@ -15,6 +15,8 @@ import aiohttp
 import aiofiles
 import requests
 import time
+import click
+
 logging.basicConfig(filename='gefs_retrieval.log', 
                 level=logging.INFO, 
                 format='%(asctime)s - %(levelname)s - %(message)s')
@@ -69,6 +71,10 @@ class GEFSRetrieve:
         self.hour_end = hour_end
         self.sem = 10
         self.download_dir = os.getcwd()
+    
+    def __str__(self):
+        return self.variable
+    
     def variable_store(self):
         return ['APCP', 'CAPE', 'CFRZR', 'CICEP', 'CIN', 'CRAIN', 'CSNOW', 
         'DLWRF', 'DPT', 'DSWRF', 'GUST', 'HLCY', 'ICETK', 'LHTFL', 'PRES', 
@@ -97,49 +103,64 @@ class GEFSRetrieve:
         new_dir = [n for n in ftpdir_list if str(new_dir_int) in n][0]
         return new_dir
 
-    def return_most_recent_links(self, type_return):
+    def return_most_recent_links(self, type_return, monitor=False):
         assert type_return in ['ens', 'mean', 'sprd'], 'type_return must be ens, mean, or sprd'
         base_url = 'https://nomads.ncep.noaa.gov/pub/data/nccf/com/gens/prod/'
         atmos_pgrb = 'atmos/pgrb2sp25/'
-        date_base_set = set()
-        level, changes = self.request_to_bs4(base_url, date_base_set)
-        modelhour_base_set = set()
-        if changes:
-            self.date_value = max(changes)
-            level, changes_model_hour = self.request_to_bs4(level, modelhour_base_set)  
-            if changes_model_hour: 
-                self.hour_value = max(changes_model_hour)
-                self.link_builder()
-        file_exists = utils.req_status_bool(self.mean_fhour_links[-1])
-        if file_exists:
-            pass
-        elif changes_model_hour == '18/':
-            self.hour_value = '12/'
-            self.link_builder()
-        elif changes_model_hour == '00/':
-            self.date_value = sorted(changes)[-2]
-            self.hour_value = '18/'
-            self.link_builder()
-        if type_return == 'ens':
-            return self.ens_fhour_links
-        elif type_return == 'mean':
-            return self.mean_fhour_links
-        elif type_return == 'sprd':
-            return self.sprd_fhour_links
-
-    def most_recent_monitor(self):
-        base_url = 'https://nomads.ncep.noaa.gov/pub/data/nccf/com/gens/prod/'
-        atmos_pgrb = 'atmos/pgrb2sp25/'
-        date_base_set = set()
-        while True:
+        if monitor:
+            self._most_recent_monitor(base_url, atmos_pgrb)
+        else:
+            date_base_set = set()
             level, changes = self.request_to_bs4(base_url, date_base_set)
             modelhour_base_set = set()
             if changes:
-                self.date_value = list(changes)[0]
-                level, changes = self.request_to_bs4(level, modelhour_base_set)  
-                if changes: 
-                    self.hour_value = list(changes)[0]
+                self.date_value = max(changes)
+                level, changes_model_hour = self.request_to_bs4(level, modelhour_base_set)  
+                if changes_model_hour: 
+                    self.hour_value = max(changes_model_hour)
                     self.link_builder()
+            file_exists = utils.req_status_bool(self.mean_fhour_links[-1])
+            if file_exists:
+                pass
+            elif changes_model_hour == '18/':
+                self.hour_value = '12/'
+                self.link_builder()
+            elif changes_model_hour == '00/':
+                self.date_value = sorted(changes)[-2]
+                self.hour_value = '18/'
+                self.link_builder()
+            if type_return == 'ens':
+                return self.ens_fhour_links
+            elif type_return == 'mean':
+                return self.mean_fhour_links
+            elif type_return == 'sprd':
+                return self.sprd_fhour_links
+
+    def _most_recent_monitor(self, base_url, atmos_pgrb):
+        date_base_set = set()
+        model_hour_base_set = set()
+        while True:
+            level_date, changes_date_in, changes_date_out = self.request_to_bs4(base_url, date_base_set)
+            if changes_date_in or changes_date_out:
+                changes_date = [n for n in [changes_date_in, changes_date_out] if n][0]
+                level_hour, changes_model_hour_in, changes_model_hour_out = self.request_to_bs4(level_date, model_hour_base_set)  
+                if changes_model_hour_in or changes_model_hour_out:
+                    changes_model_hour = [n for n in [changes_model_hour_in, changes_model_hour_out] if n][0] 
+                    self.hour_value = sorted(changes_model_hour)
+                    self.link_builder()
+            file_exists = utils.req_status_bool(self.mean_fhour_links[-1])
+            if file_exists:
+                pass
+            else:
+                if changes_model_hour == '00/':
+                    self.date_value = sorted(changes_date)[-2]
+                    self.hour_value = '18/'
+                    self.link_builder()
+                else:
+                    self.hour_value = f'{int(changes_model_hour.split("/")[0])-6:02}/'
+                    self.link_builder()
+
+            sleep(self.monitor_interval)
 
     def request_to_bs4(self, url, in_set):
         page = requests.get(url).text
@@ -150,8 +171,9 @@ class GEFSRetrieve:
         except ValueError:
             print('error in response, no links present')
         recursion_url = f'{url}{most_recent}'
-        changes = links - in_set
-        return recursion_url, changes
+        changes_in = links - in_set
+        changes_out = in_set - links
+        return recursion_url, changes_in, changes_out
 
     def link_builder(self):
         self.build_query_dict()
@@ -204,95 +226,43 @@ class GEFSRetrieve:
                             content = await resp.read()       
                         with open(f'{self.download_dir}/{link.split("=")[-1]}', mode='+wb') as f:
                             f.write(content)
-        
 
-    async def download_links(self):
-        mean_links = self.return_most_recent_links('mean')
-        sprd_links = self.return_most_recent_links('sprd')
-        links = mean_links + sprd_links
+    async def download_links(self, stat):
+        links = self.return_most_recent_links(stat)
         coro = [self.download_link(link) for link in links]
         await utils.gather_with_concurrency(self.sem, *coro)
 
-    def download_files_async(self):
+    def download_files_async(self, stat):
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.download_links())
+        loop.run_until_complete(self.download_links(stat))
 
-# def notify_changes(self):
-#     for add, rem, ftp in self.ftp_change('pub/data/nccf/com/gens/prod'):
-#         datenow = datetime.now().strftime('%Y %m %d %H:%m')
-#         logging.info(f'{datenow}')
-#         if len(add) > 0:
-#             logging.info('\n'.join('+ %s' % str(i) for i in add))
-#             self.link_builder()
-#         if len(rem) > 0:
-#             logging.info('\n'.join('- %s' % str(i) for i in rem))
-#         sleep(self.monitor_interval)
-#     datenow = datetime.now().strftime('%Y %m %d %H:%m')
-#     logging.info(f'exiting script at {datenow}')
+@click.command()
+@click.option(
+    "-m",
+    "--monitor",
+    default='n',
+    help="Whether to run the script persistently or not."
+)
+@click.option(
+    "-s",
+    "--stat",
+    default='mean',
+    help="The files to watch for, ens, mean, or sprd."
+)
+@click.option(
+    "-d",
+    "--download",
+    default='n',
+    help="Whether to download files or not."
+)
+def cli_main(monitor, stat, download):
+    monitor = utils.str_to_bool(monitor)
+    download = utils.str_to_bool(download)
+    assert stat in ['ens', 'mean', 'sprd'], 'stat must be ens, mean, or sprd'
+    retr = GEFSRetrieve()
+    if download:
+        retr.download_files_async(stat)
+    retr.return_most_recent_links(stat, monitor=monitor)
 
-# def loop_and_download(stat, fhours, ftp, http=True, query_dict={}):
-#     assert stat in ['mean','sprd']; 'stat must be mean or sprd'
-#     if stat == 'mean':
-#         gestat = 'geavg'
-#         save_name = 'mean'
-#     file_valid_list = [n for n in file_list if np.logical_and('geavg' in n, '.idx' not in n)]
-#     file_valid_list = [n for n in file_valid_list if np.logical_and(int(n[-3:]) <= 168, int(n[-3:]) % 6 == 0)]
-#     file_valid_list = [n for n in file_valid_list if '011ab' not in n]
-#     for n in file_valid_list:
-#         fname = 'gefs_mean_'+n[-3:]+'.grib2'
-#         try:
-#             with open(fname, 'wb') as f:
-#                 # Define the callback as a closure so it can access the opened 
-#                 # file in local scope
-#                 def callback(data):
-#                     f.write(data)
-#                 ftp.retrbinary(f'RETR {fname}', callback)
-#         except Exception as e:
-#             logging.error(f'{n} failure, {e}')
-#             pass
-
-# def retr_files(add, ftp, ftpdir='/'):
-#     ftp = ftp_login()
-#     ftp.cwd(ftpdir)
-#     import pdb; pdb.set_trace()
-#     while True:
-#         try:
-#             ftp.cwd(most_recent_dir(ftp))
-#         except AttributeError:
-#             continue
-#     if 'atmos' in ftp.nlst():
-#         ftp.cwd('atmos')
-#     if 'pgrb2sp25' in ftp.nlst():
-#         ftp.cwd('pgrb2sp25')
-#     assert 'pgrb2sp25' in ftp.pwd(); f'not in file directory, currently in {ftp.pwd()}'
-#     file_list = ftp.nlst()
-#     file_valid_list = [n for n in file_list if np.logical_and('geavg' in n, '.idx' not in n)]
-#     file_valid_list = [n for n in file_valid_list if np.logical_and(int(n[-3:]) <= 168, int(n[-3:]) % 6 == 0)]
-#     file_valid_list = [n for n in file_valid_list if '011ab' not in n]
-#     for n in file_valid_list:
-#         fname = 'gefs_mean_'+n[-3:]+'.grib2'
-#         try:
-#             with open(fname, 'wb') as f:
-#                 # Define the callback as a closure so it can access the opened 
-#                 # file in local scope
-#                 def callback(data):
-#                     f.write(data)
-#                 ftp.retrbinary(f'RETR {fname}', callback)
-#         except Exception as e:
-#             logging.error(f'{n} failure, {e}')
-#             pass
-#     file_valid_list = [n for n in file_list if np.logical_and('gespr' in n, '.idx' not in n)]
-#     file_valid_list = [n for n in file_valid_list if np.logical_and(int(n[-3:]) <= 168, int(n[-3:]) % 6 == 0)]
-#     for n in file_valid_list:
-#         fname = 'gefs_sprd_'+n[-3:]+'.grib2'
-#         try:
-#             ftp.retrbinary(f"RETR {n}", open(temp_store + fname, 'wb').write)
-#         except:
-#             with open(log_directory + 'retrieval_log.txt', "a") as f:
-#                 f.write(n + ' failure at ' + datetime.now().strftime('%Y-%m-%d %H:%M:%S')+'\n')
-#             break
-#     with open(log_directory + 'retrieval_log.txt', "a") as f:
-#         f.write('completed at ' + datetime.now().strftime('%Y-%m-%d %H:%M:%S')+'\n')
-
-# if __name__ == '__main__':
-#     notify_changes()
+if __name__ == '__main__':
+    cli_main()
