@@ -8,9 +8,7 @@ espr/.ipynb_checkpoints
 espr/*.ipynb
 test/*.ipynb
 
-#Ignoring reforecast data folders
-reforecasts/tcc/*
-reforecasts/dswrf/*
-reforecasts/slp/*
-
+#Ignoring reforecast, analysis, notebook data folders
+reforecasts/*
 notebooks/*
+analysis/*
