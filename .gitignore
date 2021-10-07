@@ -15,3 +15,5 @@ reforecasts/
 #Ignoring analysis folders
 analysis/
 
+#Ignoring logs
+*.log

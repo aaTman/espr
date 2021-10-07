@@ -15,10 +15,13 @@ import aiohttp
 import aiofiles
 import requests
 import click
+from pytz import timezone
+from datetime import datetime
 
 logging.basicConfig(filename='gefs_retrieval.log', 
                 level=logging.INFO, 
                 format='%(asctime)s - %(levelname)s - %(message)s')
+logging.Formatter.converter = lambda *args: datetime.now(tz=timezone('UTC')).timetuple()
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
 class GEFSRetrieve:
@@ -140,35 +143,49 @@ class GEFSRetrieve:
 
 
 
-    def most_recent_monitor(self, base_url: str, atmos_pgrb: str, stat: str):
+    def most_recent_monitor(self, stat: str):
         assert stat in ['ens', 'mean', 'sprd'], 'stat must be ens, mean, or sprd'
         base_url = 'https://nomads.ncep.noaa.gov/pub/data/nccf/com/gens/prod/'
         atmos_pgrb = 'atmos/pgrb2sp25/'
         date_base_set = set()
         model_hour_base_set = set()
+        changes_prev = set()
         while True:
             level_date, changes_date_in, changes_date_out = self.request_to_bs4(base_url, date_base_set)
             if changes_date_in or changes_date_out:
                 changes_date = [n for n in [changes_date_in, changes_date_out] if n][0]
                 level_hour, changes_model_hour_in, changes_model_hour_out = self.request_to_bs4(level_date, model_hour_base_set)  
                 if changes_model_hour_in or changes_model_hour_out:
-                    changes_model_hour = [n for n in [changes_model_hour_in, changes_model_hour_out] if n][0] 
-                    self.hour_value = sorted(changes_model_hour)
-                    self.link_builder()
-                    file_exists = utils.req_status_bool(self.mean_fhour_links[-1])
-                    if file_exists:
-                        pass
-                    else:
-                        if changes_model_hour == '00/':
-                            self.date_value = sorted(changes_date)[-2]
-                            self.hour_value = '18/'
-                            self.link_builder()
+                    changes_current = [n for n in [changes_model_hour_in, changes_model_hour_out] if n][0]
+                    changes_model_hour = sorted(changes_current)
+                    new_change = changes_current - changes_prev
+                    if new_change:
+                        changes_date = sorted([n for n in [changes_date_in, changes_date_out] if n][0] )
+                        self.hour_value = changes_model_hour[-1]
+                        self.date_value = changes_date[-1]
+                        self.link_builder()
+                        file_exists = utils.req_status_bool(self.mean_fhour_links[-1])
+                        if file_exists:
+                            pass
                         else:
-                            self.hour_value = f'{int(changes_model_hour.split("/")[0])-6:02}/'
-                            self.link_builder()
-                    if self.download:
-                        self.download_files_async(stat)
-
+                            if changes_model_hour == '00/':
+                                self.date_value = sorted(changes_date)[-2]
+                                self.hour_value = '18/'
+                                self.link_builder()
+                            else:
+                                self.hour_value = f'{int(changes_model_hour[-2].split("/")[0])-6:02}/'
+                                self.link_builder()
+                        if self.download:
+                            if stat == 'ens':
+                                links = self.ens_fhour_links
+                            elif stat == 'mean':
+                                links = self.mean_fhour_links
+                            elif stat == 'sprd':
+                                links = self.sprd_fhour_links
+                            self.download_files_async(links)
+                    else:
+                        pass
+            changes_prev = changes_current
             sleep(self.monitor_interval)
 
     def request_to_bs4(self, url, in_set):
