@@ -6,11 +6,32 @@ import shutil
 import matplotlib.pyplot as plt
 from mpl_toolkits import axes_grid1
 import json
+import asyncio
+import requests
+
+def str_to_bool(s: str):
+    s = s.lower()
+    if s in ['y','yes','ye']:
+        return True
+    else:
+        return False
+
+async def gather_with_concurrency(n, *tasks):
+    semaphore = asyncio.Semaphore(n)
+
+    async def sem_task(task):
+        async with semaphore:
+            return await task
+    return await asyncio.gather(*(sem_task(task) for task in tasks))
 
 def load_paths():
     f = open('paths.json',)
     paths = json.load(f)
     return paths
+
+def req_status_bool(link):
+    page = requests.get(link)
+    return page.ok
 
 def replace_year(x, year):
     """ Year must be a leap year for this to work """
