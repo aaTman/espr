@@ -52,7 +52,6 @@ class GEFSRetrieve:
     """
     def __init__(self, 
         variable: str, 
-        store: bool=False, 
         monitor: bool=False, 
         monitor_interval: int=30, 
         latitude_bounds: Tuple=(60,20), 
@@ -64,7 +63,6 @@ class GEFSRetrieve:
 
         self.variable = variable.upper()
         assert self.variable in self.variable_store(), f'must be one of {self.variable_store()}'
-        self.store = store
         self.monitor = monitor
         self.monitor_interval = monitor_interval
         self.latitude_bounds = latitude_bounds
@@ -78,7 +76,7 @@ class GEFSRetrieve:
             self.download_dir = os.getcwd()
         
     def __str__(self):
-        return self.variable
+        return f'GEFS Retrieval for {self.variable}'
     
     def variable_store(self):
         return ['APCP', 'CAPE', 'CFRZR', 'CICEP', 'CIN', 'CRAIN', 'CSNOW', 
@@ -108,43 +106,44 @@ class GEFSRetrieve:
         new_dir = [n for n in ftpdir_list if str(new_dir_int) in n][0]
         return new_dir
 
-    def return_most_recent_links(self, stat, monitor=False):
+    def most_recent_links(self, stat):
         assert stat in ['ens', 'mean', 'sprd'], 'stat must be ens, mean, or sprd'
         base_url = 'https://nomads.ncep.noaa.gov/pub/data/nccf/com/gens/prod/'
         atmos_pgrb = 'atmos/pgrb2sp25/'
-        if monitor:
-            self._most_recent_monitor(base_url, atmos_pgrb, stat)
-        else:
-            date_base_set = set()
-            level, changes_date_in, _ = self.request_to_bs4(base_url, date_base_set)
-            modelhour_base_set = set()
-            if changes_date_in:
-                self.date_value = max(changes_date_in)
-                level, changes_model_hour_in, _ = self.request_to_bs4(level, modelhour_base_set)  
-                if changes_model_hour_in: 
-                    self.hour_value = max(changes_model_hour_in)
-                    self.link_builder()
-            file_exists = utils.req_status_bool(self.mean_fhour_links[-1])
-            if file_exists:
-                pass
-            elif changes_model_hour_in == '18/':
-                self.hour_value = '12/'
+        date_base_set = set()
+        level, changes_date_in, _ = self.request_to_bs4(base_url, date_base_set)
+        modelhour_base_set = set()
+        if changes_date_in:
+            self.date_value = max(changes_date_in)
+            level, changes_model_hour_in, _ = self.request_to_bs4(level, modelhour_base_set)  
+            if changes_model_hour_in: 
+                self.hour_value = max(changes_model_hour_in)
                 self.link_builder()
-            elif changes_model_hour_in == '00/':
-                self.date_value = sorted(changes_date_in)[-2]
-                self.hour_value = '18/'
-                self.link_builder()
-            if self.download:
-                self.download_files_async(stat)
+        file_exists = utils.req_status_bool(self.mean_fhour_links[-1])
+        if file_exists:
+            pass
+        elif changes_model_hour_in == '18/':
+            self.hour_value = '12/'
+            self.link_builder()
+        elif changes_model_hour_in == '00/':
+            self.date_value = sorted(changes_date_in)[-2]
+            self.hour_value = '18/'
+            self.link_builder()
+        if self.download:
             if stat == 'ens':
-                return self.ens_fhour_links
+                links = self.ens_fhour_links
             elif stat == 'mean':
-                return self.mean_fhour_links
+                links = self.mean_fhour_links
             elif stat == 'sprd':
-                return self.sprd_fhour_links
+                links = self.sprd_fhour_links
+            self.download_files_async(links)
 
 
-    def _most_recent_monitor(self, base_url: str, atmos_pgrb: str, stat: str):
+
+    def most_recent_monitor(self, base_url: str, atmos_pgrb: str, stat: str):
+        assert stat in ['ens', 'mean', 'sprd'], 'stat must be ens, mean, or sprd'
+        base_url = 'https://nomads.ncep.noaa.gov/pub/data/nccf/com/gens/prod/'
+        atmos_pgrb = 'atmos/pgrb2sp25/'
         date_base_set = set()
         model_hour_base_set = set()
         while True:
@@ -157,18 +156,18 @@ class GEFSRetrieve:
                     self.hour_value = sorted(changes_model_hour)
                     self.link_builder()
                     file_exists = utils.req_status_bool(self.mean_fhour_links[-1])
+                    if file_exists:
+                        pass
+                    else:
+                        if changes_model_hour == '00/':
+                            self.date_value = sorted(changes_date)[-2]
+                            self.hour_value = '18/'
+                            self.link_builder()
+                        else:
+                            self.hour_value = f'{int(changes_model_hour.split("/")[0])-6:02}/'
+                            self.link_builder()
                     if self.download:
                         self.download_files_async(stat)
-            if file_exists:
-                pass
-            else:
-                if changes_model_hour == '00/':
-                    self.date_value = sorted(changes_date)[-2]
-                    self.hour_value = '18/'
-                    self.link_builder()
-                else:
-                    self.hour_value = f'{int(changes_model_hour.split("/")[0])-6:02}/'
-                    self.link_builder()
 
             sleep(self.monitor_interval)
 
@@ -196,29 +195,43 @@ class GEFSRetrieve:
         self.mean_fhour_links = [f"{new_link}file={self.ensemble_dict['mean']}.t{self.hour_value.strip('/')}z.pgrb2s.0p25.f{n:03}" for n in np.arange(0,self.hour_end+1,self.freq)]
         self.sprd_fhour_links = [f"{new_link}file={self.ensemble_dict['sprd']}.t{self.hour_value.strip('/')}z.pgrb2s.0p25.f{n:03}" for n in np.arange(0,self.hour_end+1,self.freq)]
 
-    def watch(self):
-        assert self.monitor, 'monitor not enabled, set monitor to True'
-        self.most_recent_monitor()
-
     async def download_link(self, link):
         async with aiohttp.ClientSession() as session:
                 async with session.get(link, timeout=0) as resp:
                     if resp.status < 400: 
                         content = await resp.read()    
                         if sys.getsizeof(content) < 100:
+                            logging.warning(f'{link.split("=")[-1]} less than 100kb, rerunning')
                             await asyncio.sleep(1)
                             content = await resp.read()       
                         with open(f'{self.download_dir}/{link.split("=")[-1]}', mode='+wb') as f:
                             f.write(content)
+                            logging.info(f'{link.split("=")[-1]} downloaded')
 
-    async def download_links(self, stat):
-        links = self.return_most_recent_links(stat)
+                        
+
+    async def download_links(self, links):
         coro = [self.download_link(link) for link in links]
         await utils.gather_with_concurrency(self.sem, *coro)
 
-    def download_files_async(self, stat):
+    def download_files_async(self, links):
+        logging.info(f'async download begun, info:\n \
+            variable: {self.variable}\n \
+            date: {self.date_value}\n \
+            hour: {self.hour_value}\n \
+            latitude: {self.latitude_bounds}\n \
+            longitude: {self.longitude_bounds}\n \
+            hour frequency: {self.freq}\n \
+            end hour: {self.hour_end}\n \
+            directory: {self.download_dir}')
         loop = asyncio.get_event_loop()
-        loop.run_until_complete(self.download_links(stat))
+        loop.run_until_complete(self.download_links(links))
+
+    def run(self, stat):
+        if self.monitor:
+            self.most_recent_monitor(stat)
+        else:
+            self.most_recent_links(stat)
 
 @click.command()
 @click.option(
@@ -244,12 +257,12 @@ class GEFSRetrieve:
     default='~/',
     help="Where files will be downloaded."
 )
-def cli_main(monitor, stat, download, dir):
+def cli_main(monitor: str, stat: str, download: str, dir: str):
     monitor = utils.str_to_bool(monitor)
     download = utils.str_to_bool(download)
     assert stat in ['ens', 'mean', 'sprd'], 'stat must be ens, mean, or sprd'
-    retr = GEFSRetrieve(download_dir=dir)
-    retr.return_most_recent_links(stat, monitor=monitor, download=download)
+    retr = GEFSRetrieve(download_dir=dir, download=download, monitor=monitor)
+    retr.run(stat)
 
 if __name__ == '__main__':
     cli_main()
