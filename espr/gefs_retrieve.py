@@ -134,14 +134,15 @@ class GEFSRetrieve:
                 self.date_value = sorted(changes_date_in)[-2]
                 self.hour_value = '18/'
                 self.link_builder()
+            if self.download:
+                self.download_files_async(stat)
             if stat == 'ens':
                 return self.ens_fhour_links
             elif stat == 'mean':
                 return self.mean_fhour_links
             elif stat == 'sprd':
                 return self.sprd_fhour_links
-            if self.download:
-                self.download_files_async(stat)
+
 
     def _most_recent_monitor(self, base_url: str, atmos_pgrb: str, stat: str):
         date_base_set = set()
