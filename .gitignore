@@ -11,9 +11,16 @@ notebooks/
 
 #Ignoring reforecast data folders
 reforecasts/
+reforecast/
 
 #Ignoring analysis folders
 analysis/
 
 #Ignoring logs
 *.log
+
+#Ignoring dask
+dask-worker-space/
+
+#Ignoring tmp
+tmp/
