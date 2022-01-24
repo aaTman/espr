@@ -159,7 +159,7 @@ class MClimate:
             ds = xr.open_mfdataset(data_path, **arg_dict)
             return ds
         else:
-            return xr.open_dataset(data_path)
+            return xr.open_dataset(data_path, chunks='auto')
    
     def retrieve_from_xr(self, stat: str = 'mean', subset_fhour: bool = False):
         arg_dict = {}
@@ -211,7 +211,7 @@ class MClimate:
         #     ds = xu.sqrt(ds[[n for n in ds.data_vars][0]]**2+ds[[n for n in ds.data_vars][1]]**2)
         return ds
 
-    def generate(self,stat: str = 'mean', load: bool = False, subset_fhour: bool = False):
+    def generate(self,stat: str='mean', load: bool=False, subset_fhour: bool=False, dask=False):
         '''
         Generates the model climatology given the forecast hour specified.
         Parameters
