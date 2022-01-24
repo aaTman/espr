@@ -1,6 +1,6 @@
 import numpy as np
 import os 
-from datetime import datetime, timedelta
+from datetime import datetime
 import subprocess
 import shutil
 import matplotlib.pyplot as plt
@@ -8,6 +8,9 @@ from mpl_toolkits import axes_grid1
 import json
 import asyncio
 import requests
+import xarray as xr
+
+cwd = os.getcwd()
 
 def str_to_bool(s: str):
     s = s.lower()
@@ -25,8 +28,8 @@ async def gather_with_concurrency(n, *tasks):
     return await asyncio.gather(*(sem_task(task) for task in tasks))
 
 def load_paths():
-    f = open('paths.json',)
-    paths = json.load(f)
+    with open(f'{cwd}/espr/paths.json',) as f:
+        paths = json.load(f)
     return paths
 
 def req_status_bool(link):
@@ -77,6 +80,31 @@ def scp_call(source, dest):
 
 def rsync_call(source, dest):
     subprocess.call(['rsync','-avh','--delete-before',source,dest],stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+
+def subset_sprd(percentile, mc_std):
+    mask = np.logical_and(percentile >= percentile[-1]-0.05, percentile <= percentile[-1]+0.05)
+    try:
+        mc_std = mc_std[[n for n in mc_std][0]]
+    except:
+        pass
+    mc_std.rename({'fhour':'time','time':'fhour'})
+    mask_da=xr.DataArray(mask[:-1], coords={
+        'fhour':mc_std.fhour.values, 
+        'time':mc_std.time.values, 
+        'lat':mc_std.lat.values, 
+        'lon':mc_std.lon.values 
+        }, 
+    dims={ 
+        'time': len(mc_std.time), 
+        'fhour':len(mc_std.fhour), 
+        'lat': len(mc_std.lat), 
+        'lon': len(mc_std.lon) 
+        }
+    )    
+    mc_std_filtered  = mc_std.where(~np.isnan(mask_da),drop=True)
+    return mc_std_filtered
 
 # Define a context manager to suppress stdout and stderr.
 class suppress_stdout_stderr(object):

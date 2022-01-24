@@ -8,7 +8,7 @@ import xarray as xr
 from mpl_toolkits.axes_grid1 import make_axes_locatable
 import os
 from datetime import datetime
-import utils as ut
+from . import utils as ut
 
 class Map:
     def __init__(self, hsa, input_map, variable, model_date, dpi=72):

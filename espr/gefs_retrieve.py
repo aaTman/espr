@@ -17,9 +17,10 @@ import requests
 import click
 from pytz import timezone
 from datetime import datetime
+import glob
 
 logging.basicConfig(filename='gefs_retrieval.log', 
-                level=logging.INFO, 
+                level=logging.ERROR, 
                 format='%(asctime)s - %(levelname)s - %(message)s')
 logging.Formatter.converter = lambda *args: datetime.now(tz=timezone('UTC')).timetuple()
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
@@ -62,7 +63,7 @@ class GEFSRetrieve:
         freq: int=3,
         hour_end: int=168,
         download: bool=False,
-        download_dir: str=None):
+        download_dir: str='./tmp'):
 
         self.variable = variable.upper()
         assert self.variable in self.variable_store(), f'must be one of {self.variable_store()}'
@@ -75,8 +76,12 @@ class GEFSRetrieve:
         self.sem = 10
         self.download = download
         self.download_dir = download_dir
-        if not self.download_dir:
-            self.download_dir = os.getcwd()
+        try:
+            tmp_dir_contents = os.listdir(self.download_dir)
+            for f in glob.glob(f'{self.download_dir}/*'):
+                os.remove(f) 
+        except FileNotFoundError:
+            os.mkdir(self.download_dir)
         
     def __str__(self):
         return f'GEFS Retrieval for {self.variable}'

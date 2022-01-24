@@ -1,14 +1,12 @@
 import numpy as np
-import json
+
 import xarray as xr
 import xarray.ufuncs as xu
-import bottleneck
+
 import datetime
 import os
-import utils as ut
-import plot
-import subprocess
-import logging
+from . import utils as ut
+
 import typing
 from dask.distributed import Client
 import dateutil.parser as dparser
@@ -55,8 +53,7 @@ class MClimate:
                 fhour: int = 24, 
                 percentage: float = 10,
                 period: int = 10,
-                v12: bool = False,
-                dask_enabled: bool = False):
+                v12: bool = False):
         if isinstance(date, datetime.date) or isinstance(date, datetime.datetime):
             self.date = date
         else:
@@ -74,13 +71,7 @@ class MClimate:
         self.path = path
         self.period = period
         self.v12 = v12
-        self.dask_enabled = dask_enabled
-        if self.dask_enabled:
-            self.client_init()
 
-    def client_init(self):
-        self.client = Client()
-    
     def var_list(self) -> list:
         return ['slp','pwat','tmp925','tmp850','wnd', 'tcc', 'dswrf']
     
@@ -129,17 +120,15 @@ class MClimate:
         days = date_range - date_range.astype('datetime64[M]') + 1
         months = date_range.astype('datetime64[M]').astype(int) % 12 + 1
         years = np.arange(2000,2020).astype(str)
-        if self.v12:
-            centered_date_str = np.char.add(np.array([n.zfill(2) for n in months.astype(int).astype(str)]).T,
+        centered_date_str = np.char.add(np.array([n.zfill(2) for n in months.astype(int).astype(str)]).T,
                                             np.array([n.zfill(2) for n in days.astype(int).astype(str)]).T)
+        if self.v12:
             full_date_list = np.array([n+m for n in years for m in centered_date_str]).T
             stat_list = [n for n in os.listdir(self.path) if self.stat in n]
             subset_stat_list = [n for n in stat_list if any(m in n for m in full_date_list)]
             subset_mean_list_full_path = [f'{self.path}/{n}' for n in subset_stat_list]
             return subset_mean_list_full_path
         else:
-            centered_date_str = np.char.add(months.astype(str),
-                                            days.astype(int).astype(str))
             return centered_date_str
     
     def set_data_path(self, stat: str, custom: typing.Optional[str] = None):
@@ -170,7 +159,7 @@ class MClimate:
             ds = xr.open_mfdataset(data_path, **arg_dict)
             return ds
         else:
-            return xr.open_mfdataset(data_path, **arg_dict)
+            return xr.open_mfdataset(data_path)
    
     def retrieve_from_xr(self, stat: str = 'mean', subset_fhour: bool = False):
         arg_dict = {}
@@ -181,8 +170,6 @@ class MClimate:
             arg_dict['concat_dim']='date'
             arg_dict['coords']='minimal'
             arg_dict['compat']='override'
-        if self.dask_enabled:
-            arg_dict['chunks'] = {}
         if self.variable == 'wnd':
             arg_dict['combine'] = 'by_coords'
             ds = self.open_xr_dataset(data_path, arg_dict) 
@@ -206,16 +193,16 @@ class MClimate:
                 ds = ds.sel(fhour=self.fhour)
 
         # year_values = ds.time.values.astype('datetime64[Y]').astype(int) + 1970
-        self.ds_test = ds
         if self.v12:
             pass
         else:
-            date_ = self.subset_time(ds)
-            date_str = np.char.add(ds.time.dt.month.values.astype(str),
-            ds.time.dt.day.values.astype(str))
-            ds= ds.assign_coords(timestr=('time',date_str))
+            date_ = self.subset_time()
+            months =  ds.time.values.astype('datetime64[M]').astype(int) % 12 + 1
+            days = (ds.time.values.astype('datetime64[D]') - ds.time.values.astype('datetime64[M]')).astype(int) + 1
+            ds_timestr = np.char.add(np.array([n.zfill(2) for n in months.astype(int).astype(str)]).T,
+                                            np.array([n.zfill(2) for n in days.astype(int).astype(str)]).T)
+            ds= ds.assign_coords(timestr=('time', ds_timestr))
             ds = ds.where(ds.timestr.isin(date_),drop=True)
-            
         # if self.fhour:
         #     ds = ds.drop(['intTime', 'intValidTime', 'fhour'])
         # else:
