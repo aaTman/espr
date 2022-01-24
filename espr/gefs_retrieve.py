@@ -12,15 +12,13 @@ from bs4 import BeautifulSoup
 import asyncio
 from espr import utils 
 import aiohttp
-import aiofiles
-import requests
 import click
 from pytz import timezone
 from datetime import datetime
 import glob
 
 logging.basicConfig(filename='gefs_retrieval.log', 
-                level=logging.ERROR, 
+                level=logging.INFO, 
                 format='%(asctime)s - %(levelname)s - %(message)s')
 logging.Formatter.converter = lambda *args: datetime.now(tz=timezone('UTC')).timetuple()
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
