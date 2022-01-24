@@ -211,7 +211,7 @@ class MClimate:
         #     ds = xu.sqrt(ds[[n for n in ds.data_vars][0]]**2+ds[[n for n in ds.data_vars][1]]**2)
         return ds
 
-    def generate(self,stat: str='mean', load: bool=False, subset_fhour: bool=False, dask=False):
+    def generate(self,stat: str='mean', load: bool=False, subset_fhour: bool=False):
         '''
         Generates the model climatology given the forecast hour specified.
         Parameters
