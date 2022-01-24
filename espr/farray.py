@@ -127,6 +127,7 @@ class ForecastArray:
         try:
             self.paths['data_store'] = os.path.abspath(self.paths['data_store'])
             flist = [n for n in glob.glob(f'{self.paths["data_store"]}*') if self.stat in n and '.idx' not in n]
+            print(flist)
             try:
                 new_gefs = xr.open_mfdataset(flist,
                 engine='cfgrib',
