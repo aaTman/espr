@@ -54,9 +54,7 @@ if __name__ == "__main__":
     paths = ut.load_paths()
     paths['output'] = os.path.abspath(paths['output'])
     paths['data_store'] = os.path.abspath(paths['data_store'])
-
-    import pdb; pdb.set_trace()
-    client = Client(n_workers=8,n_threads=2)
+    client = Client(n_workers=8, threads_per_worker=2)
     pull_gefs_files()
     fmean, fsprd = run_fcsts()
     date = pd.to_datetime(fmean['valid_time'][0])
