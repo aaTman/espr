@@ -43,7 +43,7 @@ def xarr_interpolate(original, new):
     old_lon = [i for i in original.coords if 'lon' in i][0]
     new_lat_vals = new[new_lat].values
     new_lon_vals = new[new_lon].values
-    interpolated_ds = original.interp(old_lat=new_lat_vals).interp(old_lon=new_lon_vals)
+    interpolated_ds = original.interp({old_lat:new_lat_vals}).interp({old_lon:new_lon_vals})
     return interpolated_ds
 
 def subset_sprd(percentile, mc_std):
