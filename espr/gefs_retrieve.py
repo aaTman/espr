@@ -10,7 +10,7 @@ import sys
 import requests
 from bs4 import BeautifulSoup
 import asyncio
-from espr import utils 
+import utils 
 import aiohttp
 import click
 from pytz import timezone
