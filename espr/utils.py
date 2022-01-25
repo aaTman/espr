@@ -28,7 +28,7 @@ async def gather_with_concurrency(n, *tasks):
     return await asyncio.gather(*(sem_task(task) for task in tasks))
 
 def load_paths():
-    with open(f'{cwd}/espr/paths.json',) as f:
+    with open(f'{cwd}/paths.json',) as f:
         paths = json.load(f)
     return paths
 
