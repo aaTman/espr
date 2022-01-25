@@ -58,7 +58,7 @@ if __name__ == "__main__":
     pull_gefs_files()
     fmean, fsprd = run_fcsts(paths=paths)
     import pdb; pdb.set_trace()
-    date = pd.to_datetime(fmean['valid_time'][0])
+    date = pd.to_datetime(fmean['valid_time'][0].values)
     mc_mean, mc_std = run_mcli()
     mc_mean, mc_std = interpolate_mcli(mc_mean, mc_std)
     fmean, fsprd = align_fmean_fsprd(fmean, fsprd, mc_mean)
