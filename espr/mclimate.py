@@ -159,7 +159,7 @@ class MClimate:
             ds = xr.open_mfdataset(data_path, **arg_dict)
             return ds
         else:
-            return xr.open_dataset(data_path, chunks={'lat':50,'lon':50})
+            return xr.open_dataset(data_path, chunks='auto')
    
     def retrieve_from_xr(self, stat: str='mean', subset_fhour: bool=False):
         arg_dict = {}
