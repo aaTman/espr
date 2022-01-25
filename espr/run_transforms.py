@@ -67,8 +67,10 @@ if __name__ == "__main__":
     except:
         pass
     subset_sprd = transforms.subset_sprd(percentile, mc_std)
-    hsa_final = transforms.hsa_transform(fsprd, subset_sprd)
-    hsa_final.to_netcdf(f'{paths["output"]}_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
+    subset_sprd.to_netcdf(f'{paths["output"]}/subset_sprd_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
+    
+    hsa_final = transforms.hsa(fsprd, subset_sprd)
+    hsa_final.to_netcdf(f'{paths["output"]}/hsa_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
 
 
 
