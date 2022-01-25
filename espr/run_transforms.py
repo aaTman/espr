@@ -59,7 +59,7 @@ if __name__ == "__main__":
     fmean, fsprd = run_fcsts(paths=paths)
     date = pd.to_datetime(fmean['valid_time'][0].values)
     mc_mean, mc_std = run_mcli()
-    mc_mean, mc_std = interpolate_mcli(mc_mean, mc_std)
+    mc_mean, mc_std = interpolate_mcli(mc_mean, mc_std, fmean)
     fmean, fsprd = align_fmean_fsprd(fmean, fsprd, mc_mean)
     percentile = combine_fmean_mcli(fmean, mc_mean)
     try:
