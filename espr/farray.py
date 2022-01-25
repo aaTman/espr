@@ -41,9 +41,9 @@ class ForecastArray:
     def __init__(self, stat: str, variable: str, paths: dict=None, group: bool=False):
         self.variable = self.convert_variable(variable)
         if stat == 'mean':
-            stat = 'avg'
+            stat = 'geavg'
         elif stat == 'sprd' or stat == 'std':
-            stat = 'spr'
+            stat = 'gespr'
         else:
             raise ValueError('Stat must be mean or sprd/std')
         self.stat = stat
@@ -128,7 +128,6 @@ class ForecastArray:
 
     def load_forecast(self, subset_lat=None, subset_lon=None):
         try:
-            
             flist = [n for n in glob.glob(f'{self.paths["data_store"]}/*') if self.stat in n and '.idx' not in n]
             try:
                 new_gefs = xr.open_mfdataset(flist,

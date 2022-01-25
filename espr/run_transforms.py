@@ -75,7 +75,6 @@ if __name__ == "__main__":
     logging.info('mcli dask delayed complete')
     logging.info('percentile started')
     percentile = combine_fmean_mcli(fmean, mc_mean)
-
     gc.collect()
     logging.info('percentile complete')
     try:
