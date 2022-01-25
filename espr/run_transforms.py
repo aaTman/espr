@@ -68,9 +68,11 @@ if __name__ == "__main__":
     pull_gefs_files()
     fmean, fsprd = run_fcsts(paths=paths)
     date = pd.to_datetime(fmean['valid_time'][0].values)
+    logging.info('mcli started')
     mc_mean, mc_std = run_mcli()
     mc_mean, mc_std = interpolate_mcli(mc_mean, mc_std, fmean)
     fmean, fsprd = align_fmean_fsprd(fmean, fsprd, mc_mean)
+    logging.info('mcli dask delayed complete')
     logging.info('percentile started')
     percentile = combine_fmean_mcli(fmean, mc_mean)
 
