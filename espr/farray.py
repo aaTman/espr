@@ -135,7 +135,7 @@ class ForecastArray:
                 engine='cfgrib',
                 combine='nested',
                 concat_dim='time',
-                chunks={'lat':5,'lon':5},
+                chunks={'lat':50,'lon':50},
                 backend_kwargs=dict(filter_by_keys=self.key_filter,indexpath='')
                 )
             except OSError:
