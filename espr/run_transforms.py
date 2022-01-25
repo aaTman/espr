@@ -77,6 +77,14 @@ if __name__ == "__main__":
     percentile = combine_fmean_mcli(fmean, mc_mean)
     gc.collect()
     logging.info('percentile complete')
+    percentile_ds = xr.Dataset(data_vars=dict(
+    Pressure=(['time','fhour','lat','lon'], percentile)),
+                 coords=
+                 {'time':mc_mean['time'], 
+                  'fhour':mc_mean['fhour'],
+                  'lat':mc_mean['lat'],
+                  'lon':mc_mean['lon']})
+    percentile_ds.to_netcdf(f'{paths["output"]}/percentiles_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
     try:
         mc_std = mc_std['Pressure'].drop('timestr')
     except:

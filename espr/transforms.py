@@ -11,7 +11,10 @@ def hsa(gefs_sprd, subset):
         gefs_sprd = gefs_sprd.rename({'time':'fhour'})
     except:
         pass
-    gefs_sprd = gefs_sprd.assign_coords(fhour=subset.fhour)
+    try:
+        gefs_sprd = gefs_sprd.assign_coords(fhour=subset.fhour)
+    except:
+        pass
     subset_vals = (gefs_sprd - subset.mean('time'))/subset.std('time')
     subset_vals = (0.99-(-0.99))*(subset_vals-subset_vals.min(['lat','lon']))/(subset_vals.max(['lat','lon'])-subset_vals.min(['lat','lon'])) + -0.99
     subset_vals = np.arctanh(subset_vals)
