@@ -47,15 +47,26 @@ def xarr_interpolate(original, new):
         })
     return interpolated_ds
 
-def subset_sprd(combined_fcst_mcli, mcli_sprd):
-    new_perc = combined_fcst_mcli.where(np.logical_and(combined_fcst_mcli >= combined_fcst_mcli.isel(time=-1)-0.05, combined_fcst_mcli <= combined_fcst_mcli.isel(time=-1)+0.05),drop=True)
+def subset_sprd(percentile, mc_std):
+    mask = np.logical_and(percentile >= percentile[-1]-0.05, percentile <= percentile[-1]+0.05)
     try:
-        mcli_sprd = mcli_sprd[[n for n in mcli_sprd][0]]
+        mc_std = mc_std[[n for n in mc_std][0]]
     except:
         pass
-    try:
-        mcli_sprd = mcli_sprd.where(~np.isnan(new_perc[:-1]),drop=True)
-    except ValueError:
-        mcli_sprd = mcli_sprd.drop(['isobaricInhPa'])
-        mcli_sprd = mcli_sprd.where(~np.isnan(new_perc[:-1]),drop=True)
-    return mcli_sprd
+    # mc_std.rename({'fhour':'time','time':'fhour'})
+    mask_da=xr.DataArray(mask[:-1], coords={
+        'fhour':mc_std.fhour.values, 
+        'time':mc_std.time.values, 
+        'lat':mc_std.lat.values, 
+        'lon':mc_std.lon.values 
+        }, 
+    dims={ 
+        'time': len(mc_std.time), 
+        'fhour':len(mc_std.fhour), 
+        'lat': len(mc_std.lat), 
+        'lon': len(mc_std.lon) 
+        }
+    )    
+    mc_std  = mc_std.where(~np.isnan(mask_da),drop=True)
+
+    return mc_std
