@@ -10,6 +10,15 @@ import utils as ut
 from datetime import datetime
 import os
 import bottleneck
+import logging
+import sys
+from pytz import timezone
+
+logging.basicConfig(filename='gefs_retrieval.log', 
+                level=logging.INFO, 
+                format='%(asctime)s - %(levelname)s - %(message)s')
+logging.Formatter.converter = lambda *args: datetime.now(tz=timezone('UTC')).timetuple()
+logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
 def pull_gefs_files():
     stat=['mean','sprd']
@@ -61,17 +70,20 @@ if __name__ == "__main__":
     mc_mean, mc_std = run_mcli()
     mc_mean, mc_std = interpolate_mcli(mc_mean, mc_std, fmean)
     fmean, fsprd = align_fmean_fsprd(fmean, fsprd, mc_mean)
+    logging.info('percentile started')
     percentile = combine_fmean_mcli(fmean, mc_mean)
+    logging.info('percentile complete')
     try:
         mc_std = mc_std['Pressure'].drop('timestr')
     except:
         pass
     subset_sprd = transforms.subset_sprd(percentile, mc_std)
+    logging.info('spread subset complete')
     subset_sprd.to_netcdf(f'{paths["output"]}/subset_sprd_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
-    
+    logging.info('spread subset file created')
     hsa_final = transforms.hsa(fsprd, subset_sprd)
     hsa_final.to_netcdf(f'{paths["output"]}/hsa_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
-
+    logging.info('hsa file created')
 
 
 

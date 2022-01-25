@@ -13,15 +13,8 @@ import asyncio
 import utils 
 import aiohttp
 import click
-from pytz import timezone
 from datetime import datetime
 import glob
-
-logging.basicConfig(filename='gefs_retrieval.log', 
-                level=logging.INFO, 
-                format='%(asctime)s - %(levelname)s - %(message)s')
-logging.Formatter.converter = lambda *args: datetime.now(tz=timezone('UTC')).timetuple()
-logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
 class GEFSRetrieve:
     """

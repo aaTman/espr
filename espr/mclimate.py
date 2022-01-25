@@ -161,7 +161,7 @@ class MClimate:
         else:
             return xr.open_dataset(data_path, chunks='auto')
    
-    def retrieve_from_xr(self, stat: str = 'mean', subset_fhour: bool = False):
+    def retrieve_from_xr(self, stat: str='mean', subset_fhour: bool=False):
         arg_dict = {}
         assert stat in ['mean','sprd'], 'stat must be mean or sprd'
         data_path = self.set_data_path(stat)
@@ -173,7 +173,7 @@ class MClimate:
         if self.variable == 'wnd':
             arg_dict['combine'] = 'by_coords'
             ds = self.open_xr_dataset(data_path, arg_dict) 
-            ds = xu.sqrt(ds[[n for n in ds.data_vars][0]]**2+ds[[n for n in ds.data_vars][1]]**2)
+            ds = np.sqrt(ds[[n for n in ds.data_vars][0]]**2+ds[[n for n in ds.data_vars][1]]**2)
         elif self.variable == 'tmp925':
             self.variable = 'tmp'
             ds = self.open_xr_dataset(data_path, arg_dict) 
@@ -201,7 +201,7 @@ class MClimate:
             days = (ds.time.values.astype('datetime64[D]') - ds.time.values.astype('datetime64[M]')).astype(int) + 1
             ds_timestr = np.char.add(np.array([n.zfill(2) for n in months.astype(int).astype(str)]).T,
                                             np.array([n.zfill(2) for n in days.astype(int).astype(str)]).T)
-            ds= ds.assign_coords(timestr=('time', ds_timestr))
+            ds = ds.assign_coords(timestr=('time', ds_timestr))
             ds = ds.where(ds.timestr.isin(date_),drop=True)
         # if self.fhour:
         #     ds = ds.drop(['intTime', 'intValidTime', 'fhour'])
