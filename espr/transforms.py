@@ -33,7 +33,6 @@ def percentile(mclimate, forecast):
     except ValueError:
         forecast = forecast.drop(['level'])
         new_stacked = xr.concat([mclimate[[n for n in mclimate][0]], forecast[[n for n in forecast][0]]],'time')
-    new_stacked = new_stacked.compute()
     percentile = bottleneck.rankdata(new_stacked,axis=0)/len(new_stacked['time'])
     return percentile
 

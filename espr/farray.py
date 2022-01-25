@@ -48,6 +48,7 @@ class ForecastArray:
             raise ValueError('Stat must be mean or sprd/std')
         self.stat = stat
         self.paths = ut.load_paths()
+        self.paths['data_store'] = os.path.abspath(self.paths['data_store'])
         # if self.stat in self._stat_list():
         #     pass
         # else:
@@ -125,7 +126,7 @@ class ForecastArray:
 
     def load_forecast(self, subset_lat=None, subset_lon=None):
         try:
-            self.paths['data_store'] = os.path.abspath(self.paths['data_store'])
+            
             flist = [n for n in glob.glob(f'{self.paths["data_store"]}/*') if self.stat in n and '.idx' not in n]
             try:
                 new_gefs = xr.open_mfdataset(flist,
