@@ -1,7 +1,7 @@
 import numpy as np 
 import xarray as xr
 import xarray.ufuncs as xu
-from . import utils as ut
+import utils as ut
 import os
 import glob
 

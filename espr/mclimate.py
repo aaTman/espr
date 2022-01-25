@@ -5,7 +5,7 @@ import xarray.ufuncs as xu
 
 import datetime
 import os
-from . import utils as ut
+import utils as ut
 
 import typing
 from dask.distributed import Client
