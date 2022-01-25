@@ -38,7 +38,7 @@ class ForecastArray:
         
     """
 
-    def __init__(self, stat: str, variable: str, group: bool=False):
+    def __init__(self, stat: str, variable: str, paths: dict=None, group: bool=False):
         self.variable = self.convert_variable(variable)
         if stat == 'mean':
             stat = 'avg'
@@ -47,8 +47,10 @@ class ForecastArray:
         else:
             raise ValueError('Stat must be mean or sprd/std')
         self.stat = stat
-        self.paths = ut.load_paths()
-        self.paths['data_store'] = os.path.abspath(self.paths['data_store'])
+        if paths == None:
+            self.paths = ut.load_paths()
+        else:
+            self.paths = paths
         # if self.stat in self._stat_list():
         #     pass
         # else:

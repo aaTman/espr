@@ -16,9 +16,9 @@ def pull_gefs_files():
     retr = gr.GEFSRetrieve(download=True, monitor=False, variable='PRMSL')
     _ = [retr.run(n) for n in stat]
 
-def run_fcsts():
-    forecast_mean = fa.ForecastArray('mean', 'slp')
-    forecast_sprd = fa.ForecastArray('sprd', 'slp')
+def run_fcsts(paths):
+    forecast_mean = fa.ForecastArray('mean', 'slp', paths=paths)
+    forecast_sprd = fa.ForecastArray('sprd', 'slp', paths=paths)
     fmean = forecast_mean.load_forecast()
     fmean['time'] = fmean['valid_time']
     fsprd = forecast_sprd.load_forecast()
@@ -53,6 +53,8 @@ def combine_fmean_mcli(fmean, mc_mean):
 if __name__ == "__main__":
     paths = ut.load_paths()
     paths['output'] = os.path.abspath(paths['output'])
+    paths['data_store'] = os.path.abspath(paths['data_store'])
+
     import pdb; pdb.set_trace()
     client = Client(n_workers=8,n_threads=2)
     pull_gefs_files()
