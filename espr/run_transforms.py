@@ -13,6 +13,7 @@ import bottleneck
 import logging
 import sys
 from pytz import timezone
+import gc
 
 logging.basicConfig(filename='gefs_retrieval.log', 
                 level=logging.INFO, 
@@ -72,6 +73,8 @@ if __name__ == "__main__":
     fmean, fsprd = align_fmean_fsprd(fmean, fsprd, mc_mean)
     logging.info('percentile started')
     percentile = combine_fmean_mcli(fmean, mc_mean)
+
+    gc.collect()
     logging.info('percentile complete')
     try:
         mc_std = mc_std['Pressure'].drop('timestr')
