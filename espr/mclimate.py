@@ -152,7 +152,7 @@ class MClimate:
             if self.variable == 'wnd':
                 return f'{self.path}/*{self.variable}_{stat}_{self.date_string()}.nc'
             else:
-                return f'{self.path}/{self.variable}_{stat}_{self.date_string()}.nc'
+                return f'{self.path}/{self.variable}_{stat}_{self.date_string()}_high.nc'
     
     def open_xr_dataset(self, data_path: str, arg_dict: dict):
         if self.v12:
