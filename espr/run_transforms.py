@@ -57,6 +57,7 @@ if __name__ == "__main__":
     client = Client(n_workers=8, threads_per_worker=2)
     pull_gefs_files()
     fmean, fsprd = run_fcsts(paths=paths)
+    import pdb; pdb.set_trace()
     date = pd.to_datetime(fmean['valid_time'][0])
     mc_mean, mc_std = run_mcli()
     mc_mean, mc_std = interpolate_mcli(mc_mean, mc_std)
