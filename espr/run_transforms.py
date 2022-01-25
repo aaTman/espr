@@ -2,11 +2,11 @@ import xarray as xr
 import numpy as np
 import pandas as pd
 from dask.distributed import Client
-from . import gefs_retrieve as gr 
-from . import farray as fa
-from . import mclimate as mc
-from . import transforms
-from . import utils as ut
+import gefs_retrieve as gr 
+import farray as fa
+import mclimate as mc
+import transforms
+import utils as ut
 from datetime import datetime
 import os
 import bottleneck
