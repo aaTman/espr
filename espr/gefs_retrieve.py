@@ -219,7 +219,7 @@ class GEFSRetrieve:
 
     async def download_link(self, link):
         async with aiohttp.ClientSession() as session:
-                async with session.get(link, timeout=0) as resp:
+                async with session.get(link, timeout=20) as resp:
                     if resp.status < 400: 
                         content = await resp.read()    
                         if sys.getsizeof(content) < 100:
