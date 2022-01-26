@@ -29,6 +29,7 @@ def pull_gefs_files():
 def run_fcsts(paths):
     forecast_mean = fa.ForecastArray('mean', 'slp', paths=paths)
     forecast_sprd = fa.ForecastArray('sprd', 'slp', paths=paths)
+    import pdb; pdb.set_trace()
     fmean = forecast_mean.load_forecast()
     fmean['time'] = fmean['valid_time']
     fsprd = forecast_sprd.load_forecast()
@@ -68,7 +69,7 @@ if __name__ == "__main__":
     with Client(n_workers=8, threads_per_worker=2) as client:
         pull_gefs_files()
         fmean, fsprd = run_fcsts(paths=paths)
-        date = pd.to_datetime(fmean['valid_time'][0].values)
+        date = pd.to_datetime(fmean['valid_time'][-1].values)
         logging.info('mcli started')
         mc_mean, mc_std = run_mcli()
         # mc_mean, mc_std = interpolate_mcli(mc_mean, mc_std, fmean)
