@@ -201,7 +201,7 @@ class GEFSRetrieve:
     def request_to_bs4(self, url, in_set):
         try:
             session = requests.Session()
-            retry = Retry(connect=3, backoff_factor=0.5)
+            retry = Retry(connect=5, backoff_factor=0.5)
             adapter = HTTPAdapter(max_retries=retry)
             session.mount('http://', adapter)
             session.mount('https://', adapter)
@@ -231,10 +231,10 @@ class GEFSRetrieve:
         self.mean_fhour_links = [f"{new_link}file={self.ensemble_dict['mean']}.t{self.hour_value.strip('/')}z.pgrb2s.0p25.f{n:03}" for n in np.arange(0,self.hour_end+1,self.freq)]
         self.sprd_fhour_links = [f"{new_link}file={self.ensemble_dict['sprd']}.t{self.hour_value.strip('/')}z.pgrb2s.0p25.f{n:03}" for n in np.arange(0,self.hour_end+1,self.freq)]
     
-    @retry(attempts=2)
+    @retry(attempts=5)
     async def download_link(self, link):
         async with aiohttp.ClientSession(trust_env=True) as session:
-                async with session.get(link, timeout=10, raise_for_status=True) as resp:
+                async with session.get(link, timeout=20, raise_for_status=True) as resp:
                     if resp.status < 400: 
                         content = await resp.read()    
                         if sys.getsizeof(content) < 100:
