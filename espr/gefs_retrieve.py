@@ -203,7 +203,7 @@ class GEFSRetrieve:
             adapter = HTTPAdapter(max_retries=retry)
             session.mount('http://', adapter)
             session.mount('https://', adapter)
-            page = requests.get(url).text
+            page = session.get(url).text
         except ConnectionError:
             time.sleep(5)
             page = requests.get(url).text
