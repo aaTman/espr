@@ -15,6 +15,7 @@ import aiohttp
 import click
 from datetime import datetime
 import glob
+import time
 
 class GEFSRetrieve:
     """
@@ -194,7 +195,11 @@ class GEFSRetrieve:
             sleep(self.monitor_interval)
 
     def request_to_bs4(self, url, in_set):
-        page = requests.get(url).text
+        try:
+            page = requests.get(url).text
+        except ConnectionError:
+            time.sleep(5)
+            page = requests.get(url).text
         soup = BeautifulSoup(page, 'html.parser')
         links = set([a['href'] for a in soup.find_all('a',href=True)])
         try:
