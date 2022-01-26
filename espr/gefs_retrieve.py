@@ -54,7 +54,8 @@ class GEFSRetrieve:
         freq: int=3,
         hour_end: int=168,
         download: bool=False,
-        download_dir: str='../tmp'):
+        download_dir: str='../tmp',
+        force_hour_value=None):
 
         self.variable = variable.upper()
         assert self.variable in self.variable_store(), f'must be one of {self.variable_store()}'
@@ -67,6 +68,9 @@ class GEFSRetrieve:
         self.sem = 10
         self.download = download
         self.download_dir = download_dir
+        if force_hour_value:
+            self.force_hour = True
+            self.hour_value_force = force_hour_value
         try:
             tmp_dir_contents = os.listdir(self.download_dir)
             for f in glob.glob(f'{self.download_dir}/*'):
@@ -127,6 +131,9 @@ class GEFSRetrieve:
         elif changes_model_hour_in == '00/':
             self.date_value = sorted(changes_date_in)[-2]
             self.hour_value = '18/'
+            self.link_builder()
+        if self.force_hour:
+            self.hour_value = self.hour_value_force
             self.link_builder()
         if self.download:
             if stat == 'ens':

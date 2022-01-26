@@ -23,7 +23,7 @@ logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
 def pull_gefs_files():
     stat=['mean','sprd']
-    retr = gr.GEFSRetrieve(download=True, monitor=False, variable='PRMSL')
+    retr = gr.GEFSRetrieve(download=True, monitor=False, variable='PRMSL', force_hour_value='12/')
     _ = [retr.run(n) for n in stat]
 
 def run_fcsts(paths):
