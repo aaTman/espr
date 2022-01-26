@@ -64,6 +64,7 @@ if __name__ == "__main__":
     paths = ut.load_paths()
     paths['output'] = os.path.abspath(paths['output'])
     paths['data_store'] = os.path.abspath(paths['data_store'])
+    import pdb; pdb.set_trace()
     with Client(n_workers=8, threads_per_worker=2) as client:
         pull_gefs_files()
         fmean, fsprd = run_fcsts(paths=paths)
