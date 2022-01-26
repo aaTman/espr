@@ -54,7 +54,7 @@ class GEFSRetrieve:
         freq: int=3,
         hour_end: int=168,
         download: bool=False,
-        download_dir: str='./tmp'):
+        download_dir: str='../tmp'):
 
         self.variable = variable.upper()
         assert self.variable in self.variable_store(), f'must be one of {self.variable_store()}'
