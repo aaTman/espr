@@ -8,6 +8,8 @@ from typing import Tuple
 import numpy as np
 import sys
 import requests
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 from bs4 import BeautifulSoup
 import asyncio
 import utils 
@@ -196,6 +198,11 @@ class GEFSRetrieve:
 
     def request_to_bs4(self, url, in_set):
         try:
+            session = requests.Session()
+            retry = Retry(connect=3, backoff_factor=0.5)
+            adapter = HTTPAdapter(max_retries=retry)
+            session.mount('http://', adapter)
+            session.mount('https://', adapter)
             page = requests.get(url).text
         except ConnectionError:
             time.sleep(5)
