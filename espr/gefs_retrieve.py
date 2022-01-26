@@ -72,6 +72,7 @@ class GEFSRetrieve:
         self.sem = 10
         self.download = download
         self.download_dir = download_dir
+        self.force_hour = False
         if force_hour_value:
             self.force_hour = True
             self.hour_value_force = force_hour_value
