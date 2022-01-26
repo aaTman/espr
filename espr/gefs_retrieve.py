@@ -231,7 +231,7 @@ class GEFSRetrieve:
         self.mean_fhour_links = [f"{new_link}file={self.ensemble_dict['mean']}.t{self.hour_value.strip('/')}z.pgrb2s.0p25.f{n:03}" for n in np.arange(0,self.hour_end+1,self.freq)]
         self.sprd_fhour_links = [f"{new_link}file={self.ensemble_dict['sprd']}.t{self.hour_value.strip('/')}z.pgrb2s.0p25.f{n:03}" for n in np.arange(0,self.hour_end+1,self.freq)]
     
-    @retry(attempts=5)
+    @retry(attempts=20)
     async def download_link(self, link):
         async with aiohttp.ClientSession(trust_env=True) as session:
                 async with session.get(link, timeout=20, raise_for_status=True) as resp:
