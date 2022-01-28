@@ -40,8 +40,8 @@ def run_fcsts(paths):
 
 def run_mcli():
     mcli = mc.MClimate(datetime.today().strftime('%Y-%m-%d'), '/home/taylorm/espr/reforecast', 'slp')
-    mc_mean = mcli.generate(stat='mean')
-    mc_std = mcli.generate(stat='sprd')
+    mc_mean = mcli.generate(stat='mean').persist()
+    mc_std = mcli.generate(stat='sprd').persist()
     return mc_mean, mc_std
 
 def interpolate_mcli(mc_mean, mc_std, fmean):
