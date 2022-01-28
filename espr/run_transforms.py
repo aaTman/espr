@@ -43,8 +43,8 @@ def run_fcsts(paths):
 def run_mcli():
     mcli = mc.MClimate(datetime.today().strftime('%Y-%m-%d'), '/home/taylorm/espr/reforecast', 'slp')
     with ProgressBar():
-        mc_mean = mcli.generate(stat='mean').persist()
-        mc_std = mcli.generate(stat='sprd').persist()
+        mc_mean = mcli.generate(stat='mean').compute()
+        mc_std = mcli.generate(stat='sprd').compute()
     return mc_mean, mc_std
 
 def interpolate_mcli(mc_mean, mc_std, fmean):
@@ -68,7 +68,7 @@ if __name__ == "__main__":
     paths = ut.load_paths()
     paths['output'] = os.path.abspath(paths['output'])
     paths['data_store'] = os.path.abspath(paths['data_store'])
-    client =  Client(n_workers=2, threads_per_worker=12)
+    # client =  Client(n_workers=2, threads_per_worker=12)
     pull_gefs_files()
     fmean, fsprd = run_fcsts(paths=paths)
     date = pd.to_datetime(fmean['valid_time'][-1].values)
