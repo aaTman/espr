@@ -81,6 +81,12 @@ if __name__ == "__main__":
     gc.collect()
     logging.info('percentile complete')
     logging.info('saving percentile')
+
+    import pdb; pdb.set_trace()
+    try:
+        percentile = percentile['Pressure'].drop('timestr')
+    except:
+        pass
     percentile_ds = xr.Dataset(data_vars=dict(
             Pressure=(['time','fhour','lat','lon'], percentile)),
                 coords=
