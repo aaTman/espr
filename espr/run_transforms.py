@@ -14,7 +14,8 @@ import logging
 import sys
 from pytz import timezone
 import gc
-
+import dask
+dask.config.set({"array.slicing.split_large_chunks": True})
 logging.basicConfig(filename='gefs_retrieval.log', 
                 level=logging.INFO, 
                 format='%(asctime)s - %(levelname)s - %(message)s')
