@@ -53,7 +53,6 @@ def xarr_interpolate(original, new):
     return interpolated_ds
 
 def subset_sprd(percentile, mc_std):
-    import pdb; pdb.set_trace()
     mask = np.logical_and(percentile >= percentile[-1]-0.05, percentile <= percentile[-1]+0.05)
     try:
         mc_std = mc_std[[n for n in mc_std][0]]
