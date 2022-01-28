@@ -15,7 +15,9 @@ import sys
 from pytz import timezone
 import gc
 import dask
+from dask.diagnostics import ProgressBar
 dask.config.set({"array.slicing.split_large_chunks": True})
+
 logging.basicConfig(filename='gefs_retrieval.log', 
                 level=logging.INFO, 
                 format='%(asctime)s - %(levelname)s - %(message)s')
@@ -40,8 +42,9 @@ def run_fcsts(paths):
 
 def run_mcli():
     mcli = mc.MClimate(datetime.today().strftime('%Y-%m-%d'), '/home/taylorm/espr/reforecast', 'slp')
-    mc_mean = mcli.generate(stat='mean').persist()
-    mc_std = mcli.generate(stat='sprd').persist()
+    with ProgressBar():
+        mc_mean = mcli.generate(stat='mean').persist()
+        mc_std = mcli.generate(stat='sprd').persist()
     return mc_mean, mc_std
 
 def interpolate_mcli(mc_mean, mc_std, fmean):
