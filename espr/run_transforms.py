@@ -26,7 +26,7 @@ logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
 def pull_gefs_files():
     stat=['mean','sprd']
-    retr = gr.GEFSRetrieve(download=True, monitor=False, variable='PRMSL', non_async=True,force_hour_value='06/')
+    retr = gr.GEFSRetrieve(download=True, monitor=False, variable='PRMSL', non_async=True)
     _ = [retr.run(n) for n in stat]
 
 def run_fcsts(paths):
@@ -80,11 +80,6 @@ if __name__ == "__main__":
     percentile = combine_fmean_mcli(fmean, mc_mean)
     gc.collect()
     logging.info('percentile complete')
-    logging.info('saving percentile')
-    # try:
-    #     mc_std = mc_std['Pressure'].drop('timestr')
-    # except:
-    #     pass
     subset_sprd = transforms.subset_sprd(percentile, mc_std)
     logging.info('spread subset complete')
     # subset_sprd.to_netcdf(f'{paths["output"]}/subset_sprd_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
