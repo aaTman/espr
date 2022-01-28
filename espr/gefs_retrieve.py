@@ -59,7 +59,8 @@ class GEFSRetrieve:
         hour_end: int=168,
         download: bool=False,
         download_dir: str='../tmp',
-        force_hour_value=None):
+        force_hour_value=None,
+        non_async=False):
 
         self.variable = variable.upper()
         assert self.variable in self.variable_store(), f'must be one of {self.variable_store()}'
@@ -72,6 +73,7 @@ class GEFSRetrieve:
         self.sem = 10
         self.download = download
         self.download_dir = download_dir
+        self.async_flag = non_async
         self.force_hour = False
         if force_hour_value:
             self.force_hour = True
@@ -148,7 +150,10 @@ class GEFSRetrieve:
             elif stat == 'sprd':
                 links = self.sprd_fhour_links
             print(links)
-            self.download_files_async(links)
+            if self.async_flag:
+                self.download_files(links)
+            else:
+                self.download_files_async(links)
             
 
 
@@ -251,6 +256,33 @@ class GEFSRetrieve:
         coro = [self.download_link(link) for link in links]
         await utils.gather_with_concurrency(self.sem, *coro)
 
+    def download_files(self, links):
+        logging.info(f'normal download begun, info:\n \
+            variable: {self.variable}\n \
+            date: {self.date_value}\n \
+            hour: {self.hour_value}\n \
+            latitude: {self.latitude_bounds}\n \
+            longitude: {self.longitude_bounds}\n \
+            hour frequency: {self.freq}\n \
+            end hour: {self.hour_end}\n \
+            directory: {self.download_dir}')   
+        local_filename = url.split('/')[-1]
+    # NOTE the stream=True parameter below
+    
+        with open(local_filename, 'wb') as f:
+            for chunk in r.iter_content(chunk_size=8192): 
+                # If you have chunk encoded response uncomment if
+                # and set chunk_size parameter to None.
+                #if chunk: 
+                f.write(chunk)
+        for link in links:  
+            with requests.get(link, stream=True) as r:
+                r.raise_for_status()
+                with open(f'{self.download_dir}/{link.split("=")[-1]}', mode='+wb') as f:
+                    for chunk in r.iter_content(chunk_size=8192): 
+                                    f.write(chunk)
+                    logging.info(f'{link.split("=")[-1]} downloaded')
+        
     def download_files_async(self, links):
         logging.info(f'async download begun, info:\n \
             variable: {self.variable}\n \
