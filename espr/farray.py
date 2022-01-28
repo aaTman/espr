@@ -136,7 +136,7 @@ class ForecastArray:
                 concat_dim='time',
                 chunks={'lat':5,'lon':5},
                 backend_kwargs=dict(filter_by_keys=self.key_filter,indexpath='')
-                )
+                ).compute()
             except OSError:
                 raise FileNotFoundError('sprd files likely not in download folder, please check!')
         except KeyError:
