@@ -64,40 +64,40 @@ if __name__ == "__main__":
     paths = ut.load_paths()
     paths['output'] = os.path.abspath(paths['output'])
     paths['data_store'] = os.path.abspath(paths['data_store'])
-    with Client(n_workers=8, threads_per_worker=2) as client:
-        pull_gefs_files()
-        fmean, fsprd = run_fcsts(paths=paths)
-        date = pd.to_datetime(fmean['valid_time'][-1].values)
-        logging.info('mcli started')
-        mc_mean, mc_std = run_mcli()
-        # mc_mean, mc_std = interpolate_mcli(mc_mean, mc_std, fmean)
-        fmean, fsprd = align_fmean_fsprd(fmean, fsprd, mc_mean)
-        logging.info('mcli dask delayed complete')
-        logging.info('percentile started')
-        percentile = combine_fmean_mcli(fmean, mc_mean)
-        gc.collect()
-        logging.info('percentile complete')
-        logging.info('saving percentile')
-        percentile_ds = xr.Dataset(data_vars=dict(
-                Pressure=(['time','fhour','lat','lon'], percentile)),
-                    coords=
-                    {'time':mc_mean['time'], 
-                    'fhour':mc_mean['fhour'],
-                    'lat':mc_mean['lat'],
-                    'lon':mc_mean['lon']})
-        percentile_ds.to_netcdf(f'{paths["output"]}/percentiles_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
-        logging.info('percentile saved')
-        try:
-            mc_std = mc_std['Pressure'].drop('timestr')
-        except:
-            pass
-        subset_sprd = transforms.subset_sprd(percentile, mc_std)
-        logging.info('spread subset complete')
-        subset_sprd.to_netcdf(f'{paths["output"]}/subset_sprd_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
-        logging.info('spread subset file created')
-        hsa_final = transforms.hsa(fsprd, subset_sprd)
-        hsa_final.to_netcdf(f'{paths["output"]}/hsa_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
-        logging.info('hsa file created')
+    client =  Client(n_workers=2, threads_per_worker=12)
+    pull_gefs_files()
+    fmean, fsprd = run_fcsts(paths=paths)
+    date = pd.to_datetime(fmean['valid_time'][-1].values)
+    logging.info('mcli started')
+    mc_mean, mc_std = run_mcli()
+    # mc_mean, mc_std = interpolate_mcli(mc_mean, mc_std, fmean)
+    fmean, fsprd = align_fmean_fsprd(fmean, fsprd, mc_mean)
+    logging.info('mcli dask delayed complete')
+    logging.info('percentile started')
+    percentile = combine_fmean_mcli(fmean, mc_mean)
+    gc.collect()
+    logging.info('percentile complete')
+    logging.info('saving percentile')
+    percentile_ds = xr.Dataset(data_vars=dict(
+            Pressure=(['time','fhour','lat','lon'], percentile)),
+                coords=
+                {'time':mc_mean['time'], 
+                'fhour':mc_mean['fhour'],
+                'lat':mc_mean['lat'],
+                'lon':mc_mean['lon']})
+    percentile_ds.to_netcdf(f'{paths["output"]}/percentiles_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
+    logging.info('percentile saved')
+    try:
+        mc_std = mc_std['Pressure'].drop('timestr')
+    except:
+        pass
+    subset_sprd = transforms.subset_sprd(percentile, mc_std)
+    logging.info('spread subset complete')
+    subset_sprd.to_netcdf(f'{paths["output"]}/subset_sprd_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
+    logging.info('spread subset file created')
+    hsa_final = transforms.hsa(fsprd, subset_sprd)
+    hsa_final.to_netcdf(f'{paths["output"]}/hsa_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
+    logging.info('hsa file created')
 
 
 
