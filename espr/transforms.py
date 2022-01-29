@@ -16,38 +16,25 @@ def hsa(gefs_sprd, subset, debug=False):
     except:
         pass
     subset_vals = (gefs_sprd - subset.mean('time',skipna=True))/subset.std('time',skipna=True)
-    subset_perc = percentile(gefs_sprd, subset, sprd=True)
+    new_stacked = xr.concat([subset.drop('timestr').to_dataset(),gefs_sprd.expand_dims('time')],'time')
+    percentile = bottleneck.nanrankdata(new_stacked['Pressure'],axis=0)/len(new_stacked['time'])
+    perc_ds = xr.Dataset(
+    data_vars=dict( 
+        spread_percentile=(["fhour","lat","lon"],percentile[-1])
+        ), coords=dict( 
+            lon=new_stacked.lon.values, 
+            lat=new_stacked.lat.values, 
+            fhour=new_stacked.fhour.values 
+            ), 
+            attrs=dict(
+                description="Spread percentile based on reforecast\
+                    of similar mean anomalies by gridpoint."), 
+    )
     if debug:
         return subset_vals
     subset_vals = (0.99-(-0.99))*(subset_vals-subset_vals.min(['lat','lon']))/(subset_vals.max(['lat','lon'])-subset_vals.min(['lat','lon'])) + -0.99
     subset_vals = np.arctanh(subset_vals)
-    return subset_vals, subset_perc
-
-def percentile(mclimate, forecast, sprd=False):
-    if sprd:
-        pass
-    else:
-        try:
-            forecast = forecast.where(forecast['step'].isin(mclimate['fhour']), drop=True)
-        except ValueError:
-            raise ValueError('forecast step value not the same as fhour, test incoming data')
-        vars = ['step','meanSea','valid_time','isobaricInhPa', 'pressure', 'heightAboveGround','intTime','intValidTime']
-        forecast = forecast.drop({'time'}).rename({'step':'fhour','time':'fhour'}).expand_dims('time')
-        drop_vars = list(set(list(mclimate.coords) + list(mclimate)) - set(list(forecast.coords)+list(forecast)))
-        try:
-            forecast = forecast.drop(drop_vars)
-        except ValueError:
-            mclimate = mclimate.drop(drop_vars)
-    import pdb; pdb.set_trace()
-    try:
-        new_stacked = xr.concat([mclimate[[n for n in mclimate][0]], forecast[[n for n in forecast][0]]],'time')
-    except TypeError:
-        new_stacked = xr.concat([mclimate, forecast[[n for n in forecast][0]]],'time')
-    except ValueError:
-        forecast = forecast.drop(['level'])
-        new_stacked = xr.concat([mclimate[[n for n in mclimate][0]], forecast[[n for n in forecast][0]]],'time')
-    percentile = bottleneck.nanrankdata(new_stacked,axis=0)/len(new_stacked['time'])
-    return percentile
+    return subset_vals, perc_ds
 
 def xarr_interpolate(original, new):
     new_lat = [i for i in new.coords if 'lat' in i][0]
@@ -59,41 +46,25 @@ def xarr_interpolate(original, new):
     interpolated_ds = original.interp({old_lat:new_lat_vals})
     return interpolated_ds
 
-def subset_sprd(percentile, mc_std, sprd=False):
-    if sprd:
-        perc_ds = xr.Dataset(
-            data_vars=dict(
-                spread_percentile=(["lon","lat","fhour"],percentile[-1])
-            ),
-            coords=dict(
-                lon=mc_std.lon.values,
-                lat=mc_std.lat.values,
-                fhour=mc_std.fhour.values
-            ),
-            attrs=dict(description="Spread percentile based on reforecast\
-                 of similar mean anomalies by gridpoint."),
-        )
-
-        return perc_ds
-    else:
-        mask = np.logical_and(percentile >= percentile[-1]-0.05, percentile <= percentile[-1]+0.05)
-        try:
-            mc_std = mc_std[[n for n in mc_std][0]]
-        except:
-            pass
-        # mc_std.rename({'fhour':'time','time':'fhour'})
-        mask_da=xr.DataArray(mask[:-1], coords={
-            'fhour':mc_std.fhour.values, 
-            'time':mc_std.time.values, 
-            'lat':mc_std.lat.values, 
-            'lon':mc_std.lon.values 
-            }, 
-        dims={ 
-            'time': len(mc_std.time), 
-            'fhour':len(mc_std.fhour), 
-            'lat': len(mc_std.lat), 
-            'lon': len(mc_std.lon) 
-            }
-        )
-        mc_std = mc_std.where(mask_da)
-        return mc_std
+def subset_sprd(percentile, mc_std):
+    mask = np.logical_and(percentile >= percentile[-1]-0.05, percentile <= percentile[-1]+0.05)
+    try:
+        mc_std = mc_std[[n for n in mc_std][0]]
+    except:
+        pass
+    # mc_std.rename({'fhour':'time','time':'fhour'})
+    mask_da=xr.DataArray(mask[:-1], coords={
+        'fhour':mc_std.fhour.values, 
+        'time':mc_std.time.values, 
+        'lat':mc_std.lat.values, 
+        'lon':mc_std.lon.values 
+        }, 
+    dims={ 
+        'time': len(mc_std.time), 
+        'fhour':len(mc_std.fhour), 
+        'lat': len(mc_std.lat), 
+        'lon': len(mc_std.lon) 
+        }
+    )
+    mc_std = mc_std.where(mask_da)
+    return mc_std
