@@ -38,6 +38,7 @@ def percentile(mclimate, forecast, sprd=False):
             forecast = forecast.drop(drop_vars)
         except ValueError:
             mclimate = mclimate.drop(drop_vars)
+    import pdb; pdb.set_trace()
     try:
         new_stacked = xr.concat([mclimate[[n for n in mclimate][0]], forecast[[n for n in forecast][0]]],'time')
     except TypeError:
