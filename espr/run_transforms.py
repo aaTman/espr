@@ -54,8 +54,10 @@ def interpolate_mcli(mc_mean, mc_std, fmean):
 def align_fmean_fsprd(fmean, fsprd, mc_mean):
     fmean = fmean.where(fmean['step'].isin(mc_mean['fhour']), drop=True)
     fmean = fmean.drop({'time'}).rename({'step':'fhour','time':'fhour'})
+    fmean = fmean.where(fmean['lat'].isin(mc_mean['lat']),drop=True)
     fsprd = fsprd.where(fsprd['step'].isin(mc_mean['fhour']), drop=True)
     fsprd = fsprd.drop({'time'}).rename({'step':'fhour','time':'fhour'})
+    fsprd = fsprd.where(fsprd['lat'].isin(mc_mean['lat']),drop=True)
     return fmean, fsprd
 
 def combine_fmean_mcli(fmean, mc_mean):
