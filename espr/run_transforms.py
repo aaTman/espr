@@ -84,7 +84,6 @@ if __name__ == "__main__":
     logging.info('percentile started')
     percentile = combine_fcast_and_mcli(fmean, mc_mean)
     percentile_sprd = combine_fcast_and_mcli(fsprd, mc_std)
-    
     gc.collect()
     logging.info('percentile complete')
     subset_sprd = transforms.subset_sprd(percentile, mc_std)
