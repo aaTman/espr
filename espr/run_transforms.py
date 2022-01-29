@@ -60,8 +60,8 @@ def align_fmean_fsprd(fmean, fsprd, mc_mean):
     fsprd = fsprd.where(fsprd['lat'].isin(mc_mean['lat']),drop=True)
     return fmean, fsprd
 
-def combine_fmean_mcli(fmean, mc_mean):
-    big_ds = xr.concat([mc_mean['Pressure'].drop('timestr'),fmean['Pressure'].expand_dims('time')],dim='time')
+def combine_fcast_and_mcli(fcast, mcli):
+    big_ds = xr.concat([mcli['Pressure'].drop('timestr'),fcast['Pressure'].expand_dims('time')],dim='time')
     percentile = bottleneck.rankdata(big_ds,axis=0)/len(big_ds['time'])
     return percentile
 
@@ -78,12 +78,18 @@ if __name__ == "__main__":
     mc_std = mc_std.dropna(dim='lat')
     mc_mean = mc_mean.dropna(dim='lat')
     fmean, fsprd = align_fmean_fsprd(fmean, fsprd, mc_mean)
+    fmean.to_netcdf(f'{paths["output"]}/slp_mean_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
+    fsprd.to_netcdf(f'{paths["output"]}/slp_sprd_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
     logging.info('mcli dask delayed complete')
     logging.info('percentile started')
-    percentile = combine_fmean_mcli(fmean, mc_mean)
+    percentile = combine_fcast_and_mcli(fmean, mc_mean)
+    percentile_sprd = combine_fcast_and_mcli(fsprd, mc_std)
+    
     gc.collect()
     logging.info('percentile complete')
     subset_sprd = transforms.subset_sprd(percentile, mc_std)
+    sprd_perc = transforms.subset_sprd(percentile_sprd, mc_std, sprd=True)
+    sprd_perc.to_netcdf(f'{paths["output"]}/sprd_perc_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
     logging.info('spread subset complete')
     # subset_sprd.to_netcdf(f'{paths["output"]}/subset_sprd_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
     # logging.info('spread subset file created')

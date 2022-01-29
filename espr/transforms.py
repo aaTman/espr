@@ -53,7 +53,7 @@ def xarr_interpolate(original, new):
     interpolated_ds = original.interp({old_lat:new_lat_vals})
     return interpolated_ds
 
-def subset_sprd(percentile, mc_std):
+def subset_sprd(percentile, mc_std, sprd=False):
     mask = np.logical_and(percentile >= percentile[-1]-0.05, percentile <= percentile[-1]+0.05)
     try:
         mc_std = mc_std[[n for n in mc_std][0]]
@@ -72,6 +72,21 @@ def subset_sprd(percentile, mc_std):
         'lat': len(mc_std.lat), 
         'lon': len(mc_std.lon) 
         }
-    ) 
-    mc_std = mc_std.where(mask_da)
-    return mc_std
+    )
+    if sprd:
+        perc=xr.DataArray(percentile[-1], coords={
+            'fhour':mc_std.fhour.values, 
+            'lat':mc_std.lat.values, 
+            'lon':mc_std.lon.values 
+            }, 
+        dims={  
+            'fhour':len(mc_std.fhour), 
+            'lat': len(mc_std.lat), 
+            'lon': len(mc_std.lon) 
+            }
+        )    
+
+        return perc
+    else:
+        mc_std = mc_std.where(mask_da)
+        return mc_std
