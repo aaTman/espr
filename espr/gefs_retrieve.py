@@ -60,6 +60,7 @@ class GEFSRetrieve:
         download: bool=False,
         download_dir: str='../tmp',
         force_hour_value=None,
+        force_day_value=None,
         non_async=False):
 
         self.variable = variable.upper()
@@ -75,9 +76,13 @@ class GEFSRetrieve:
         self.download_dir = download_dir
         self.async_flag = non_async
         self.force_hour = False
+        self.force_day = False
         if force_hour_value:
             self.force_hour = True
             self.hour_value_force = force_hour_value
+        if force_day_value:
+            self.force_day = True
+            self.day_value_force = force_day_value
         try:
             tmp_dir_contents = os.listdir(self.download_dir)
             for f in glob.glob(f'{self.download_dir}/*'):
@@ -141,6 +146,9 @@ class GEFSRetrieve:
             self.link_builder()
         if self.force_hour:
             self.hour_value = self.hour_value_force
+            self.link_builder()
+        if self.force_day:
+            self.date_value = self.day_value_force
             self.link_builder()
         if self.download:
             if stat == 'ens':
