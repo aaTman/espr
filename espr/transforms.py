@@ -73,6 +73,5 @@ def subset_sprd(percentile, mc_std):
         }
     )    
     import pdb; pdb.set_trace()
-    mc_std = mc_std.dropna(dim='lat')
     mc_std = mc_std.where(~np.isnan(mask_da),drop=True)
     return mc_std
