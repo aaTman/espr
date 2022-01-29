@@ -2,7 +2,7 @@ import xarray as xr
 import numpy as np
 import bottleneck
 
-def hsa(gefs_sprd, subset):
+def hsa(gefs_sprd, subset, debug=False):
     '''Standardizes, sets min and max between -1 and 1, and takes the arctanh to derive
     a "normal" distribution to ascribe more statistical relevance to the zscore values.
     
@@ -16,9 +16,12 @@ def hsa(gefs_sprd, subset):
     except:
         pass
     subset_vals = (gefs_sprd - subset.mean('time',skipna=True))/subset.std('time',skipna=True)
+    subset_perc = percentile(gefs_sprd, subset)
+    if debug:
+        return subset_vals
     subset_vals = (0.99-(-0.99))*(subset_vals-subset_vals.min(['lat','lon']))/(subset_vals.max(['lat','lon'])-subset_vals.min(['lat','lon'])) + -0.99
     subset_vals = np.arctanh(subset_vals)
-    return subset_vals
+    return subset_vals, subset_perc
 
 def percentile(mclimate, forecast):
     try:
@@ -39,7 +42,7 @@ def percentile(mclimate, forecast):
     except ValueError:
         forecast = forecast.drop(['level'])
         new_stacked = xr.concat([mclimate[[n for n in mclimate][0]], forecast[[n for n in forecast][0]]],'time')
-    percentile = bottleneck.rankdata(new_stacked,axis=0)/len(new_stacked['time'])
+    percentile = bottleneck.nanrankdata(new_stacked,axis=0)/len(new_stacked['time'])
     return percentile
 
 def xarr_interpolate(original, new):
