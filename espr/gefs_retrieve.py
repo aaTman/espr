@@ -85,8 +85,7 @@ class GEFSRetrieve:
             self.day_value_force = force_day_value
         try:
             tmp_dir_contents = os.listdir(self.download_dir)
-            for f in glob.glob(f'{self.download_dir}/*'):
-                os.remove(f) 
+            self.clear_files_from_download_dir('*')
         except FileNotFoundError:
             os.mkdir(self.download_dir)
         
@@ -134,7 +133,7 @@ class GEFSRetrieve:
             if changes_model_hour_in: 
                 self.hour_value = max(changes_model_hour_in)
                 self.link_builder()
-        file_exists = utils.req_status_bool(self.mean_fhour_links[-1])
+        file_exists = utils.req_status_bool(self.mean_fhour_links[-1])    # def _convert_stat(self):
         if file_exists:
             pass
         elif changes_model_hour_in == '18/':
@@ -163,8 +162,7 @@ class GEFSRetrieve:
                 else:
                     self.download_files_async(links)
             except requests.exceptions.HTTPError:
-                for f in glob.glob(f'{self.download_dir}/*'):
-                    os.remove(f) 
+                self.clear_files_from_download_dir(stat) 
                 if self.hour_value == '00/':
                     self.date_value = sorted(changes_date_in)[-2]
                     self.hour_value = '18/'
@@ -183,9 +181,9 @@ class GEFSRetrieve:
                 else:
                     self.download_files_async(links)
 
-            
-
-
+    def clear_files_from_download_dir(self,stat):
+        for f in glob.glob(f'{self.download_dir}/*{stat}*'):
+            os.remove(f)
 
     def most_recent_monitor(self, stat: str):
         assert stat in ['ens', 'mean', 'sprd'], 'stat must be ens, mean, or sprd'
