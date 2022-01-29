@@ -15,7 +15,7 @@ def hsa(gefs_sprd, subset):
         gefs_sprd = gefs_sprd.assign_coords(fhour=subset.fhour)
     except:
         pass
-    subset_vals = (gefs_sprd - subset.mean('time'))/subset.std('time')
+    subset_vals = (gefs_sprd - subset.mean('time',skipna=True))/subset.std('time',skipna=True)
     subset_vals = (0.99-(-0.99))*(subset_vals-subset_vals.min(['lat','lon']))/(subset_vals.max(['lat','lon'])-subset_vals.min(['lat','lon'])) + -0.99
     subset_vals = np.arctanh(subset_vals)
     return subset_vals
@@ -71,7 +71,6 @@ def subset_sprd(percentile, mc_std):
         'lat': len(mc_std.lat), 
         'lon': len(mc_std.lon) 
         }
-    )    
-    import pdb; pdb.set_trace()
-    mc_std = mc_std.where(~np.isnan(mask_da))
+    ) 
+    mc_std = mc_std.where(mask_da)
     return mc_std

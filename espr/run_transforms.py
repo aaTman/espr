@@ -88,6 +88,5 @@ if __name__ == "__main__":
     # subset_sprd.to_netcdf(f'{paths["output"]}/subset_sprd_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
     # logging.info('spread subset file created')
     hsa_final = transforms.hsa(fsprd, subset_sprd)
-    import pdb; pdb.set_trace()
     hsa_final.to_netcdf(f'{paths["output"]}/hsa_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
     logging.info('hsa file created')
