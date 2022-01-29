@@ -26,7 +26,7 @@ logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
 def pull_gefs_files():
     stat=['mean','sprd']
-    retr = gr.GEFSRetrieve(download=True, monitor=False, variable='PRMSL', non_async=True, force_hour_value='12/', force_day_value='gefs.20220128')
+    retr = gr.GEFSRetrieve(download=True, monitor=False, variable='PRMSL', non_async=True)
     _ = [retr.run(n) for n in stat]
 
 def run_fcsts(paths):
@@ -80,7 +80,7 @@ if __name__ == "__main__":
     fmean, fsprd = align_fmean_fsprd(fmean, fsprd, mc_mean)
     fmean.to_netcdf(f'{paths["output"]}/slp_mean_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
     fsprd.to_netcdf(f'{paths["output"]}/slp_sprd_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
-    logging.info('mcli dask delayed complete')
+    logging.info('fmean and spread saved, mcli finished')
     logging.info('percentile started')
     percentile = combine_fcast_and_mcli(fmean, mc_mean)
     percentile_sprd = combine_fcast_and_mcli(fsprd, mc_std)

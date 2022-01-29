@@ -53,39 +53,40 @@ def xarr_interpolate(original, new):
     return interpolated_ds
 
 def subset_sprd(percentile, mc_std, sprd=False):
-    mask = np.logical_and(percentile >= percentile[-1]-0.05, percentile <= percentile[-1]+0.05)
-    try:
-        mc_std = mc_std[[n for n in mc_std][0]]
-    except:
-        pass
-    # mc_std.rename({'fhour':'time','time':'fhour'})
-    mask_da=xr.DataArray(mask[:-1], coords={
-        'fhour':mc_std.fhour.values, 
-        'time':mc_std.time.values, 
-        'lat':mc_std.lat.values, 
-        'lon':mc_std.lon.values 
-        }, 
-    dims={ 
-        'time': len(mc_std.time), 
-        'fhour':len(mc_std.fhour), 
-        'lat': len(mc_std.lat), 
-        'lon': len(mc_std.lon) 
-        }
-    )
     if sprd:
-        perc=xr.DataArray(percentile[-1], coords={
+        perc_ds = xr.Dataset(
+            data_vars=dict(
+                spread_percentile=(["lon","lat","fhour"],percentile[-1])
+            ),
+            coords=dict(
+                lon=mc_std.lon.values,
+                lat=mc_std.lat.values,
+                fhour=mc_std.fhour.values
+            ),
+            attrs=dict(description="Spread percentile based on reforecast\
+                 of similar mean anomalies by gridpoint."),
+        )
+
+        return perc_ds
+    else:
+        mask = np.logical_and(percentile >= percentile[-1]-0.05, percentile <= percentile[-1]+0.05)
+        try:
+            mc_std = mc_std[[n for n in mc_std][0]]
+        except:
+            pass
+        # mc_std.rename({'fhour':'time','time':'fhour'})
+        mask_da=xr.DataArray(mask[:-1], coords={
             'fhour':mc_std.fhour.values, 
+            'time':mc_std.time.values, 
             'lat':mc_std.lat.values, 
             'lon':mc_std.lon.values 
             }, 
-        dims={  
+        dims={ 
+            'time': len(mc_std.time), 
             'fhour':len(mc_std.fhour), 
             'lat': len(mc_std.lat), 
             'lon': len(mc_std.lon) 
             }
-        )    
-
-        return perc
-    else:
+        )
         mc_std = mc_std.where(mask_da)
         return mc_std
