@@ -149,7 +149,6 @@ class GEFSRetrieve:
                 links = self.mean_fhour_links
             elif stat == 'sprd':
                 links = self.sprd_fhour_links
-            print(links)
             if self.async_flag:
                 self.download_files(links)
             else:
