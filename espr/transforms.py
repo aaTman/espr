@@ -16,25 +16,28 @@ def hsa(gefs_sprd, subset, debug=False):
     except:
         pass
     subset_vals = (gefs_sprd - subset.mean('time',skipna=True))/subset.std('time',skipna=True)
-    subset_perc = percentile(gefs_sprd, subset)
+    subset_perc = percentile(gefs_sprd, subset, sprd=True)
     if debug:
         return subset_vals
     subset_vals = (0.99-(-0.99))*(subset_vals-subset_vals.min(['lat','lon']))/(subset_vals.max(['lat','lon'])-subset_vals.min(['lat','lon'])) + -0.99
     subset_vals = np.arctanh(subset_vals)
     return subset_vals, subset_perc
 
-def percentile(mclimate, forecast):
-    try:
-        forecast = forecast.where(forecast['step'].isin(mclimate['fhour']), drop=True)
-    except ValueError:
-        raise ValueError('forecast step value not the same as fhour, test incoming data')
-    vars = ['step','meanSea','valid_time','isobaricInhPa', 'pressure', 'heightAboveGround','intTime','intValidTime']
-    forecast = forecast.drop({'time'}).rename({'step':'fhour','time':'fhour'}).expand_dims('time')
-    drop_vars = list(set(list(mclimate.coords) + list(mclimate)) - set(list(forecast.coords)+list(forecast)))
-    try:
-        forecast = forecast.drop(drop_vars)
-    except ValueError:
-        mclimate = mclimate.drop(drop_vars)
+def percentile(mclimate, forecast, sprd=False):
+    if sprd:
+        pass
+    else:
+        try:
+            forecast = forecast.where(forecast['step'].isin(mclimate['fhour']), drop=True)
+        except ValueError:
+            raise ValueError('forecast step value not the same as fhour, test incoming data')
+        vars = ['step','meanSea','valid_time','isobaricInhPa', 'pressure', 'heightAboveGround','intTime','intValidTime']
+        forecast = forecast.drop({'time'}).rename({'step':'fhour','time':'fhour'}).expand_dims('time')
+        drop_vars = list(set(list(mclimate.coords) + list(mclimate)) - set(list(forecast.coords)+list(forecast)))
+        try:
+            forecast = forecast.drop(drop_vars)
+        except ValueError:
+            mclimate = mclimate.drop(drop_vars)
     try:
         new_stacked = xr.concat([mclimate[[n for n in mclimate][0]], forecast[[n for n in forecast][0]]],'time')
     except TypeError:
