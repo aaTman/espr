@@ -72,5 +72,6 @@ def subset_sprd(percentile, mc_std):
         'lon': len(mc_std.lon) 
         }
     )    
-    mc_std = mc_std.where(~np.isnan(mask_da),drop=True)
+    import pdb; pdb.set_trace()
+    mc_std = mc_std.where(~np.isnan(mask_da))
     return mc_std

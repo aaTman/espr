@@ -91,7 +91,3 @@ if __name__ == "__main__":
     import pdb; pdb.set_trace()
     hsa_final.to_netcdf(f'{paths["output"]}/hsa_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
     logging.info('hsa file created')
-
-
-
-
