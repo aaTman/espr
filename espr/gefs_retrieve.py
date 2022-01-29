@@ -163,6 +163,8 @@ class GEFSRetrieve:
                 else:
                     self.download_files_async(links)
             except requests.exceptions.HTTPError:
+                for f in glob.glob(f'{self.download_dir}/*'):
+                    os.remove(f) 
                 if self.hour_value == '00/':
                     self.date_value = sorted(changes_date_in)[-2]
                     self.hour_value = '18/'
