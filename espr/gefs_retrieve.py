@@ -170,6 +170,12 @@ class GEFSRetrieve:
                 else:
                     self.hour_value = f"{int(self.hour_value.strip('/'))-6}/"
                     self.link_builder()
+            if stat == 'ens':
+                links = self.ens_fhour_links
+            elif stat == 'mean':
+                links = self.mean_fhour_links
+            elif stat == 'sprd':
+                links = self.sprd_fhour_links
                 if self.async_flag:
                     self.download_files(links)
                 else:
