@@ -16,7 +16,7 @@ def hsa(gefs_sprd, subset, debug=False):
     except:
         pass
     import pdb; pdb.set_trace()
-    subset_vals = (gefs_sprd - subset.mean('time',skipna=True))/subset.std('time',skipna=True)
+    subset_vals = (gefs_sprd['Pressure'] - subset.mean('time',skipna=True))/subset.std('time',skipna=True)
     new_stacked = xr.concat([subset.drop('timestr').to_dataset(),gefs_sprd.expand_dims('time')],'time')
     percentile = bottleneck.nanrankdata(new_stacked['Pressure'],axis=0)/len(new_stacked['time'])
     perc_ds = xr.Dataset(
