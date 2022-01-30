@@ -1,6 +1,7 @@
 import xarray as xr
 import numpy as np
 import bottleneck
+import cfgrib
 
 def hsa(gefs_sprd, subset, debug=False):
     '''Standardizes, sets min and max between -1 and 1, and takes the arctanh to derive
