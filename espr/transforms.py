@@ -32,8 +32,8 @@ def hsa(gefs_sprd, subset, debug=False):
     )
     if debug:
         return subset_vals
-    subset_vals = (0.99-(-0.99))*(subset_vals-subset_vals.min(['lat','lon']))/(subset_vals.max(['lat','lon'])-subset_vals.min(['lat','lon'])) + -0.99
-    subset_vals = np.arctanh(subset_vals)
+    # subset_vals = (0.99-(-0.99))*(subset_vals-subset_vals.min(['lat','lon']))/(subset_vals.max(['lat','lon'])-subset_vals.min(['lat','lon'])) + -0.99
+    # subset_vals = np.arctanh(subset_vals)
     return subset_vals, perc_ds
 
 def xarr_interpolate(original, new):
