@@ -18,6 +18,7 @@ import aiohttp
 import click
 from datetime import datetime
 import glob
+import cfgrib
 import time
 
 class GEFSRetrieve:
