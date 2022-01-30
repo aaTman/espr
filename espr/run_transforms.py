@@ -16,6 +16,7 @@ from pytz import timezone
 import gc
 import dask
 from dask.diagnostics import ProgressBar
+import click
 dask.config.set({"array.slicing.split_large_chunks": True})
 
 logging.basicConfig(filename='gefs_retrieval.log', 
@@ -24,9 +25,14 @@ logging.basicConfig(filename='gefs_retrieval.log',
 logging.Formatter.converter = lambda *args: datetime.now(tz=timezone('UTC')).timetuple()
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
-def pull_gefs_files():
+def pull_gefs_files(date=None,hour=None):
     stat=['mean','sprd']
-    retr = gr.GEFSRetrieve(download=True, monitor=False, variable='PRMSL', non_async=True)
+    retr = gr.GEFSRetrieve(download=True, 
+    monitor=False,
+    variable='PRMSL', 
+    non_async=True,
+    force_hour_value=hour,
+    force_day_value=date)
     _ = [retr.run(n) for n in stat]
 
 def run_fcsts(paths):
@@ -65,12 +71,29 @@ def combine_fcast_and_mcli(fcast, mcli):
     percentile = bottleneck.rankdata(big_ds,axis=0)/len(big_ds['time'])
     return percentile
 
-if __name__ == "__main__":
+
+@click.command()
+@click.option(
+    "-d",
+    "--date",
+    default='n',
+    help="select date, if not the current date. Default is n (None)."
+)
+@click.option(
+    "-h",
+    "--hour",
+    default='n',
+    help="Choose model hour run, if not the current model. Default is n (None)."
+)
+def main(date, hour):
+    if date == 'n':
+        date = None
+    if hour == 'n':
+        hour = None
     paths = ut.load_paths()
     paths['output'] = os.path.abspath(paths['output'])
     paths['data_store'] = os.path.abspath(paths['data_store'])
-    # client =  Client(n_workers=2, threads_per_worker=12)
-    pull_gefs_files()
+    pull_gefs_files(date=date, hour=hour)
     fmean, fsprd = run_fcsts(paths=paths)
     date = pd.to_datetime(fmean['valid_time'][0].values)
     logging.info('mcli started')
@@ -91,3 +114,6 @@ if __name__ == "__main__":
     ssa_perc.to_netcdf(f'{paths["output"]}/ssa_perc_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
     hsa_final.to_netcdf(f'{paths["output"]}/hsa_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
     logging.info('hsa and ssa percentile file created')
+
+if __name__ == "__main__":
+    main()

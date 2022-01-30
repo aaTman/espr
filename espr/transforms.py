@@ -15,10 +15,9 @@ def hsa(gefs_sprd, subset, debug=False):
         gefs_sprd = gefs_sprd.assign_coords(fhour=subset.fhour)
     except:
         pass
-    import pdb; pdb.set_trace()
     subset_vals = (gefs_sprd['Pressure'] - subset.mean('time',skipna=True))/subset.std('time',skipna=True)
     new_stacked = xr.concat([subset.drop('timestr').to_dataset(),gefs_sprd.expand_dims('time')],'time')
-    percentile = bottleneck.nanrankdata(new_stacked['Pressure'],axis=0)/len(new_stacked['time'])
+    percentile = bottleneck.nanrankdata(new_stacked['Pressure'],axis=0)/np.count_nonzero(~np.isnan(new_stacked['Pressure'][:,0,0,0]))
     perc_ds = xr.Dataset(
     data_vars=dict( 
         spread_percentile=(["fhour","lat","lon"],percentile[-1])
