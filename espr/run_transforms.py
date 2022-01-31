@@ -90,7 +90,11 @@ def main(date, hour):
         date = None
     if hour == 'n':
         hour = None
-    paths = ut.load_paths()
+    abspath = os.path.abspath(__file__)
+    dname = os.path.dirname(abspath)
+    os.chdir(dname)
+    dir = os.getcwd()
+    paths = ut.load_paths(dir)
     paths['output'] = os.path.abspath(paths['output'])
     paths['data_store'] = os.path.abspath(paths['data_store'])
     pull_gefs_files(date=date, hour=hour)
@@ -116,7 +120,4 @@ def main(date, hour):
     logging.info('hsa and ssa percentile file created')
 
 if __name__ == "__main__":
-    abspath = os.path.abspath(__file__)
-    dname = os.path.dirname(abspath)
-    os.chdir(dname)
     main()

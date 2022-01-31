@@ -10,8 +10,6 @@ import asyncio
 import requests
 import xarray as xr
 
-cwd = os.getcwd()
-
 def str_to_bool(s: str):
     s = s.lower()
     if s in ['y','yes','ye']:
@@ -27,8 +25,9 @@ async def gather_with_concurrency(n, *tasks):
             return await task
     return await asyncio.gather(*(sem_task(task) for task in tasks))
 
-def load_paths():
-    with open(f'{cwd}/paths.json',) as f:
+def load_paths(dir):
+    "Loads the json file with associated paths for program."
+    with open(f'{dir}/paths.json',) as f:
         paths = json.load(f)
     return paths
 
