@@ -51,10 +51,6 @@ class ForecastArray:
             self.paths = ut.load_paths()
         else:
             self.paths = paths
-        # if self.stat in self._stat_list():
-        #     pass
-        # else:
-        #     self._convert_stat()
         if group == True:
             self.load_all()
 
@@ -79,12 +75,6 @@ class ForecastArray:
             self.in_var = 'wnd'
             self.key_filter = {'typeOfLevel': 'heightAboveGround', 'level': 10}
         return self.in_var
-
-    # def _convert_stat(self):
-    #     if self.stat in {'avg','mu'}:
-    #         self.stat = 'mean'
-    #     elif self.stat in {'std', 'sigma', 'spread'}:
-    #         self.stat = 'sprd'
     
     def _var_list(self):
         return ['prmsl','pwat','tmp','wnd']

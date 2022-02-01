@@ -1,8 +1,9 @@
 import xarray as xr
 import numpy as np
 import bottleneck
+import cfgrib
 
-def hsa(gefs_sprd, subset):
+def hsa(gefs_sprd, subset, debug=False):
     '''Standardizes, sets min and max between -1 and 1, and takes the arctanh to derive
     a "normal" distribution to ascribe more statistical relevance to the zscore values.
     
@@ -15,32 +16,26 @@ def hsa(gefs_sprd, subset):
         gefs_sprd = gefs_sprd.assign_coords(fhour=subset.fhour)
     except:
         pass
-    subset_vals = (gefs_sprd - subset.mean('time'))/subset.std('time')
-    subset_vals = (0.99-(-0.99))*(subset_vals-subset_vals.min(['lat','lon']))/(subset_vals.max(['lat','lon'])-subset_vals.min(['lat','lon'])) + -0.99
-    subset_vals = np.arctanh(subset_vals)
-    return subset_vals
-
-def percentile(mclimate, forecast):
-    try:
-        forecast = forecast.where(forecast['step'].isin(mclimate['fhour']), drop=True)
-    except ValueError:
-        raise ValueError('forecast step value not the same as fhour, test incoming data')
-    vars = ['step','meanSea','valid_time','isobaricInhPa', 'pressure', 'heightAboveGround','intTime','intValidTime']
-    forecast = forecast.drop({'time'}).rename({'step':'fhour','time':'fhour'}).expand_dims('time')
-    drop_vars = list(set(list(mclimate.coords) + list(mclimate)) - set(list(forecast.coords)+list(forecast)))
-    try:
-        forecast = forecast.drop(drop_vars)
-    except ValueError:
-        mclimate = mclimate.drop(drop_vars)
-    try:
-        new_stacked = xr.concat([mclimate[[n for n in mclimate][0]], forecast[[n for n in forecast][0]]],'time')
-    except TypeError:
-        new_stacked = xr.concat([mclimate, forecast[[n for n in forecast][0]]],'time')
-    except ValueError:
-        forecast = forecast.drop(['level'])
-        new_stacked = xr.concat([mclimate[[n for n in mclimate][0]], forecast[[n for n in forecast][0]]],'time')
-    percentile = bottleneck.rankdata(new_stacked,axis=0)/len(new_stacked['time'])
-    return percentile
+    subset_vals = (gefs_sprd['Pressure'] - subset.mean('time',skipna=True))/subset.std('time',skipna=True)
+    new_stacked = xr.concat([subset.drop('timestr').to_dataset(),gefs_sprd.expand_dims('time')],'time')
+    percentile = bottleneck.nanrankdata(new_stacked['Pressure'],axis=0)/np.count_nonzero(~np.isnan(new_stacked['Pressure'][:,0,0,0]))
+    perc_ds = xr.Dataset(
+    data_vars=dict( 
+        spread_percentile=(["fhour","lat","lon"],percentile[-1])
+        ), coords=dict( 
+            lon=new_stacked.lon.values, 
+            lat=new_stacked.lat.values, 
+            fhour=new_stacked.fhour.values 
+            ), 
+            attrs=dict(
+                description="Spread percentile based on reforecast\
+                    of similar mean anomalies by gridpoint."), 
+    )
+    if debug:
+        return subset_vals
+    # subset_vals = (0.99-(-0.99))*(subset_vals-subset_vals.min(['lat','lon']))/(subset_vals.max(['lat','lon'])-subset_vals.min(['lat','lon'])) + -0.99
+    # subset_vals = np.arctanh(subset_vals)
+    return subset_vals, perc_ds
 
 def xarr_interpolate(original, new):
     new_lat = [i for i in new.coords if 'lat' in i][0]
@@ -71,7 +66,6 @@ def subset_sprd(percentile, mc_std):
         'lat': len(mc_std.lat), 
         'lon': len(mc_std.lon) 
         }
-    )    
-    mc_std  = mc_std.where(~np.isnan(mask_da),drop=True)
-
+    )
+    mc_std = mc_std.where(mask_da)
     return mc_std

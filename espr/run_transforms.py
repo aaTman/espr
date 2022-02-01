@@ -16,6 +16,7 @@ from pytz import timezone
 import gc
 import dask
 from dask.diagnostics import ProgressBar
+import click
 dask.config.set({"array.slicing.split_large_chunks": True})
 
 logging.basicConfig(filename='gefs_retrieval.log', 
@@ -24,9 +25,14 @@ logging.basicConfig(filename='gefs_retrieval.log',
 logging.Formatter.converter = lambda *args: datetime.now(tz=timezone('UTC')).timetuple()
 logging.getLogger().addHandler(logging.StreamHandler(sys.stdout))
 
-def pull_gefs_files():
+def pull_gefs_files(date=None,hour=None):
     stat=['mean','sprd']
-    retr = gr.GEFSRetrieve(download=True, monitor=False, variable='PRMSL', non_async=True,force_hour_value='06/')
+    retr = gr.GEFSRetrieve(download=True, 
+    monitor=False,
+    variable='PRMSL', 
+    non_async=True,
+    force_hour_value=hour,
+    force_day_value=date)
     _ = [retr.run(n) for n in stat]
 
 def run_fcsts(paths):
@@ -42,9 +48,8 @@ def run_fcsts(paths):
 
 def run_mcli():
     mcli = mc.MClimate(datetime.today().strftime('%Y-%m-%d'), '/home/taylorm/espr/reforecast', 'slp')
-    with ProgressBar():
-        mc_mean = mcli.generate(stat='mean').persist()
-        mc_std = mcli.generate(stat='sprd').persist()
+    mc_mean = mcli.generate(stat='mean')
+    mc_std = mcli.generate(stat='sprd')
     return mc_mean, mc_std
 
 def interpolate_mcli(mc_mean, mc_std, fmean):
@@ -55,54 +60,64 @@ def interpolate_mcli(mc_mean, mc_std, fmean):
 def align_fmean_fsprd(fmean, fsprd, mc_mean):
     fmean = fmean.where(fmean['step'].isin(mc_mean['fhour']), drop=True)
     fmean = fmean.drop({'time'}).rename({'step':'fhour','time':'fhour'})
+    fmean = fmean.where(fmean['lat'].isin(mc_mean['lat']),drop=True)
     fsprd = fsprd.where(fsprd['step'].isin(mc_mean['fhour']), drop=True)
     fsprd = fsprd.drop({'time'}).rename({'step':'fhour','time':'fhour'})
+    fsprd = fsprd.where(fsprd['lat'].isin(mc_mean['lat']),drop=True)
     return fmean, fsprd
 
-def combine_fmean_mcli(fmean, mc_mean):
-    big_ds = xr.concat([mc_mean['Pressure'].drop('timestr'),fmean['Pressure'].expand_dims('time')],dim='time')
+def combine_fcast_and_mcli(fcast, mcli):
+    big_ds = xr.concat([mcli['Pressure'].drop('timestr'),fcast['Pressure'].expand_dims('time')],dim='time')
     percentile = bottleneck.rankdata(big_ds,axis=0)/len(big_ds['time'])
     return percentile
 
-if __name__ == "__main__":
-    paths = ut.load_paths()
+
+@click.command()
+@click.option(
+    "-d",
+    "--date",
+    default='n',
+    help="select date, if not the current date. Default is n (None)."
+)
+@click.option(
+    "-h",
+    "--hour",
+    default='n',
+    help="Choose model hour run, if not the current model. Default is n (None)."
+)
+def main(date, hour):
+    if date == 'n':
+        date = None
+    if hour == 'n':
+        hour = None
+    abspath = os.path.abspath(__file__)
+    dname = os.path.dirname(abspath)
+    os.chdir(dname)
+    dir = os.getcwd()
+    paths = ut.load_paths(dir)
     paths['output'] = os.path.abspath(paths['output'])
     paths['data_store'] = os.path.abspath(paths['data_store'])
-    client =  Client(n_workers=2, threads_per_worker=12)
-    pull_gefs_files()
+    pull_gefs_files(date=date, hour=hour)
     fmean, fsprd = run_fcsts(paths=paths)
-    date = pd.to_datetime(fmean['valid_time'][-1].values)
+    date = pd.to_datetime(fmean['valid_time'][0].values)
     logging.info('mcli started')
     mc_mean, mc_std = run_mcli()
-    # mc_mean, mc_std = interpolate_mcli(mc_mean, mc_std, fmean)
+    mc_std = mc_std.dropna(dim='lat')
+    mc_mean = mc_mean.dropna(dim='lat')
     fmean, fsprd = align_fmean_fsprd(fmean, fsprd, mc_mean)
-    logging.info('mcli dask delayed complete')
+    fmean.to_netcdf(f'{paths["output"]}/slp_mean_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
+    fsprd.to_netcdf(f'{paths["output"]}/slp_sprd_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
+    logging.info('fmean and spread saved, mcli finished')
     logging.info('percentile started')
-    percentile = combine_fmean_mcli(fmean, mc_mean)
+    percentile = combine_fcast_and_mcli(fmean, mc_mean)
     gc.collect()
     logging.info('percentile complete')
-    logging.info('saving percentile')
-    percentile_ds = xr.Dataset(data_vars=dict(
-            Pressure=(['time','fhour','lat','lon'], percentile)),
-                coords=
-                {'time':mc_mean['time'], 
-                'fhour':mc_mean['fhour'],
-                'lat':mc_mean['lat'],
-                'lon':mc_mean['lon']})
-    percentile_ds.to_netcdf(f'{paths["output"]}/percentiles_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
-    logging.info('percentile saved')
-    try:
-        mc_std = mc_std['Pressure'].drop('timestr')
-    except:
-        pass
     subset_sprd = transforms.subset_sprd(percentile, mc_std)
     logging.info('spread subset complete')
-    subset_sprd.to_netcdf(f'{paths["output"]}/subset_sprd_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
-    logging.info('spread subset file created')
-    hsa_final = transforms.hsa(fsprd, subset_sprd)
+    hsa_final, ssa_perc = transforms.hsa(fsprd, subset_sprd)
+    ssa_perc.to_netcdf(f'{paths["output"]}/ssa_perc_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
     hsa_final.to_netcdf(f'{paths["output"]}/hsa_{date.year}{date.month:02}{date.day:02}_{date.hour:02}z.nc')
-    logging.info('hsa file created')
+    logging.info('hsa and ssa percentile file created')
 
-
-
-
+if __name__ == "__main__":
+    main()
