@@ -47,8 +47,8 @@ def xarr_interpolate(original, new):
     interpolated_ds = original.interp({old_lat:new_lat_vals})
     return interpolated_ds
 
-def subset_sprd(percentile, mc_std):
-    mask = np.logical_and(percentile >= percentile[-1]-0.05, percentile <= percentile[-1]+0.05)
+def subset_sprd(percentile, mc_std, percentile_bounds=0.10):
+    mask = np.logical_and(percentile >= percentile[-1]-percentile_bounds, percentile <= percentile[-1]+percentile_bounds)
     try:
         mc_std = mc_std[[n for n in mc_std][0]]
     except:
