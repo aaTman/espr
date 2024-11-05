@@ -1,24 +1,16 @@
-import gc
-import logging
-import os
-import sys
 from datetime import datetime
-from typing import List, Tuple, Union
-
-import bottleneck
-import dask
-import numpy as np
+from typing import Tuple, Union
 import pandas as pd
 import pytz
 import xarray as xr
-from dask.distributed import Client
 from gefsv12_retro_kerchunk.kerchunk_zarr import RetrospectivePull
-
-import transforms
+import fsspec
 import utils as ut
+from tempfile import TemporaryDirectory
+from kerchunk.combine import MultiZarrToZarr
 
 """
-steps for slp: 
+steps for slp:
 1. set up the datetime
 2. get the current gefs forecast
 3. get the full model climatology based on the datetime
@@ -35,11 +27,16 @@ class MClimate:
         self,
         date: Union[pd.Timestamp, datetime] = datetime.now(tz=pytz.UTC),
         variable: str = "pres_msl",
-        **kwargs
+        **kwargs,
     ):
         self.date = date
         self.variable = variable
-        self.centered_date_range = kwargs.get("centered_date_range", 10)
+        self.centered_date_range = (kwargs.get("centered_date_range", 10),)
+        self.directory = kwargs.get("directory", TemporaryDirectory().name)
+        self.so = {"anon": True, "skip_instance_cache": True}
+        self.fs_local = fsspec.filesystem(
+            "", skip_instance_cache=True, use_listings_cache=False
+        )
 
     def gefs_retrospective(self, fhour: int = 3) -> xr.Dataset:
         gefs_r = RetrospectivePull(
@@ -51,3 +48,57 @@ class MClimate:
         gefs_r.generate_json_files()
         ds = gefs_r.generate_kerchunk(ds=True)
         return ds
+
+    def gefs_live(self, fhour: int = 3) -> xr.Dataset:
+        basename_espr = (
+            f's3://noaa-gefs-pds/gefs.{self.date.strftime("%Y%m%d")}'
+            "/00/atmos/pgrb2sp25/gespr.t00z.pgrb2s.0p25.f{fhour:03d}",
+            "spr",
+        )
+        basename_eavg = (
+            f's3://noaa-gefs-pds/gefs.{self.date.strftime("%Y%m%d")}'
+            "/00/atmos/pgrb2sp25/geavg.t00z.pgrb2s.0p25.f{fhour:03d}",
+            "avg",
+        )
+
+        gespr, geavg = [
+            self.generate_gefs_live_ds(basename)
+            for basename in [basename_espr, basename_eavg]
+        ]
+
+    def generate_gefs_live_ds(self, basename_tuple: Tuple[str, str]) -> xr.Dataset:
+
+        ut.gen_json(
+            file_url=basename_tuple[0],
+            fs_local=self.fs_local,
+            so=self.so,
+            json_dir=self.directory,
+            statistic=basename_tuple[1],
+        )
+        reference_jsons = self.fs_local.ls(self.directory)  # get list of file names
+        mzarr = MultiZarrToZarr(
+            [n for n in reference_jsons if basename_tuple[1] in n],
+            concat_dims=["valid_time"],
+            identical_dims=["latitude", "longitude", "step"],
+        )
+        translated_mzarr = mzarr.translate()
+        # open dataset as zarr object using fsspec reference file system and xarray
+        fs = fsspec.filesystem(
+            "reference",
+            fo=translated_mzarr,
+            remote_protocol="s3",
+            remote_options={"anon": True},
+        )
+        m = fs.get_mapper("")
+        zarr_ds = xr.open_dataset(
+            m,
+            engine="zarr",
+            backend_kwargs=dict(consolidated=False),
+            chunks={"valid_time": 1},
+        )
+        return zarr_ds
+
+    def run_spread_mclimate(self, fhour: int = 3) -> xr.Dataset:
+        gefs_r = self.gefs_retrospective(fhour=fhour)
+        gefs_l = self.gefs_live(fhour=fhour)
+        return gefs_r, gefs_l
