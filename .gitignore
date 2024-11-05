@@ -12,7 +12,8 @@ notebooks/
 #Ignoring reforecast data folders
 reforecasts/
 reforecast/
-
+data_test/
+data/
 #Ignoring analysis folders
 analysis/
 
