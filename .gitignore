@@ -5,7 +5,7 @@ espr/.ipynb_checkpoints
 .vscode
 
 #Ignoring Jupyter notebooks
-espr/*.ipynb
+# espr/*.ipynb
 test/*.ipynb
 notebooks/
 

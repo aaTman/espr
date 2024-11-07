@@ -11,6 +11,8 @@ import requests
 import xarray as xr
 from kerchunk.grib2 import scan_grib
 import ujson
+import fsspec
+import bottleneck
 
 
 def str_to_bool(s: str):
@@ -174,9 +176,47 @@ def gen_json(file_url, fs_local, so, json_dir, statistic="spr"):
     )  # create the reference using scan_grib
     for i, message in enumerate(out):
         key_ = [n for n in message["refs"].keys() if "0.0" in n]
-        print(
-            key_[0].split("/")[0]
-        )  # scan_grib outputs a list containing one reference per grib message
         if "prmsl" in key_[0]:
-            with fs_local.open(f"{json_dir}gefs_rt_{statistic}.json", "w") as f:
+            with fs_local.open(f"{json_dir}/gefs_rt_{statistic}.json", "w") as f:
                 f.write(ujson.dumps(message))  # write to file
+                print(f"File {file_url} written to {json_dir}gefs_rt_{statistic}.json")
+
+
+def find_most_recent_gefs(gefs_live_date, fhour):
+    fs = fsspec.filesystem("s3", anon=True, skip_instance_cache=True)
+    basename_espr = (
+        f's3://noaa-gefs-pds/gefs.{gefs_live_date.strftime("%Y%m%d")}'
+        f'/{gefs_live_date.strftime("%H")}/atmos/pgrb2sp25/'
+        f'gespr.t{gefs_live_date.strftime("%H")}z.pgrb2s.0p25.f{fhour:03d}',
+        "spr",
+    )
+    basename_eavg = (
+        f's3://noaa-gefs-pds/gefs.{gefs_live_date.strftime("%Y%m%d")}'
+        f'/{gefs_live_date.strftime("%H")}/atmos/pgrb2sp25/'
+        f'geavg.t{gefs_live_date.strftime("%H")}z.pgrb2s.0p25.f{fhour:03d}',
+        "avg",
+    )
+    while not fs.exists(basename_espr[0]) and not fs.exists(basename_eavg[1]):
+        gefs_live_date -= np.timedelta64(6, "h")
+        basename_espr = (
+            f's3://noaa-gefs-pds/gefs.{gefs_live_date.strftime("%Y%m%d")}'
+            f'/{gefs_live_date.strftime("%H")}/atmos/pgrb2sp25/'
+            f'gespr.t{gefs_live_date.strftime("%H")}z.pgrb2s.0p25.f{fhour:03d}',
+            "spr",
+        )
+        basename_eavg = (
+            f's3://noaa-gefs-pds/gefs.{gefs_live_date.strftime("%Y%m%d")}'
+            f'/{gefs_live_date.strftime("%H")}/atmos/pgrb2sp25/'
+            f'geavg.t{gefs_live_date.strftime("%H")}z.pgrb2s.0p25.f{fhour:03d}',
+            "avg",
+        )
+    return gefs_live_date, basename_espr, basename_eavg
+
+
+def combine_fcast_and_mcli(fcast, mcli):
+    big_ds = xr.concat(
+        [mcli["Pressure"].drop("timestr"), fcast["Pressure"].expand_dims("time")],
+        dim="time",
+    )
+    percentile = bottleneck.rankdata(big_ds, axis=0) / len(big_ds["time"])
+    return percentile

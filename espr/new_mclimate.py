@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Tuple, Union
+from typing import Tuple, Union, Optional
 import pandas as pd
 import pytz
 import xarray as xr
@@ -8,6 +8,7 @@ import fsspec
 import utils as ut
 from tempfile import TemporaryDirectory
 from kerchunk.combine import MultiZarrToZarr
+from dataclasses import dataclass
 
 """
 steps for slp:
@@ -22,17 +23,33 @@ steps for slp:
 """
 
 
+@dataclass
+class GEFSLive:
+    gespr: xr.Dataset
+    geavg: xr.Dataset
+
+
 class MClimate:
     def __init__(
         self,
         date: Union[pd.Timestamp, datetime] = datetime.now(tz=pytz.UTC),
         variable: str = "pres_msl",
+        directory: Optional[str] = None,
         **kwargs,
     ):
         self.date = date
+        self.gefs_live_date = self.date
+        if self.gefs_live_date.hour % 6 != 0:
+            self.gefs_live_date = self.gefs_live_date.replace(
+                hour=(self.gefs_live_date.hour // 6) * 6,
+                minute=0,
+                second=0,
+                microsecond=0,
+            )
         self.variable = variable
-        self.centered_date_range = (kwargs.get("centered_date_range", 10),)
-        self.directory = kwargs.get("directory", TemporaryDirectory().name)
+        self.centered_date_range = kwargs.get("centered_date_range", 10)
+        self._temp_dir = TemporaryDirectory() if directory is None else None
+        self.directory = directory if directory is not None else self._temp_dir.name
         self.so = {"anon": True, "skip_instance_cache": True}
         self.fs_local = fsspec.filesystem(
             "", skip_instance_cache=True, use_listings_cache=False
@@ -49,25 +66,19 @@ class MClimate:
         ds = gefs_r.generate_kerchunk(ds=True)
         return ds
 
-    def gefs_live(self, fhour: int = 3) -> xr.Dataset:
-        basename_espr = (
-            f's3://noaa-gefs-pds/gefs.{self.date.strftime("%Y%m%d")}'
-            "/00/atmos/pgrb2sp25/gespr.t00z.pgrb2s.0p25.f{fhour:03d}",
-            "spr",
-        )
-        basename_eavg = (
-            f's3://noaa-gefs-pds/gefs.{self.date.strftime("%Y%m%d")}'
-            "/00/atmos/pgrb2sp25/geavg.t00z.pgrb2s.0p25.f{fhour:03d}",
-            "avg",
+    def gefs_live(self, fhour: int = 3) -> GEFSLive:
+        self.gefs_live_date, basename_espr, basename_eavg = ut.find_most_recent_gefs(
+            self.gefs_live_date, fhour
         )
 
         gespr, geavg = [
             self.generate_gefs_live_ds(basename)
             for basename in [basename_espr, basename_eavg]
         ]
+        gefs_live = GEFSLive(gespr=gespr, geavg=geavg)
+        return gefs_live
 
     def generate_gefs_live_ds(self, basename_tuple: Tuple[str, str]) -> xr.Dataset:
-
         ut.gen_json(
             file_url=basename_tuple[0],
             fs_local=self.fs_local,
@@ -98,7 +109,7 @@ class MClimate:
         )
         return zarr_ds
 
-    def run_spread_mclimate(self, fhour: int = 3) -> xr.Dataset:
+    def run_spread_mclimate(self, fhour: int = 3):
         gefs_r = self.gefs_retrospective(fhour=fhour)
         gefs_l = self.gefs_live(fhour=fhour)
         return gefs_r, gefs_l
