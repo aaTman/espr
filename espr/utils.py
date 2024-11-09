@@ -1,18 +1,19 @@
-import numpy as np
-import os
-from datetime import datetime
-import subprocess
-import shutil
-import matplotlib.pyplot as plt
-from mpl_toolkits import axes_grid1
-import json
 import asyncio
+import json
+import os
+import shutil
+import subprocess
+from datetime import datetime
+
+import bottleneck
+import fsspec
+import matplotlib.pyplot as plt
+import numpy as np
 import requests
+import ujson
 import xarray as xr
 from kerchunk.grib2 import scan_grib
-import ujson
-import fsspec
-import bottleneck
+from mpl_toolkits import axes_grid1
 
 
 def str_to_bool(s: str):
@@ -182,7 +183,7 @@ def gen_json(file_url, fs_local, so, json_dir, statistic="spr"):
                 print(f"File {file_url} written to {json_dir}gefs_rt_{statistic}.json")
 
 
-def find_most_recent_gefs(gefs_live_date, fhour):
+def find_most_recent_gefs(gefs_live_date: datetime, fhour: int):
     fs = fsspec.filesystem("s3", anon=True, skip_instance_cache=True)
     basename_espr = (
         f's3://noaa-gefs-pds/gefs.{gefs_live_date.strftime("%Y%m%d")}'

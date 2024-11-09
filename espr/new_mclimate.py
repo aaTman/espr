@@ -1,14 +1,15 @@
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Tuple, Union, Optional
+from tempfile import TemporaryDirectory
+from typing import Optional, Tuple, Union
+
+import fsspec
 import pandas as pd
 import pytz
+import utils as ut
 import xarray as xr
 from gefsv12_retro_kerchunk.kerchunk_zarr import RetrospectivePull
-import fsspec
-import utils as ut
-from tempfile import TemporaryDirectory
 from kerchunk.combine import MultiZarrToZarr
-from dataclasses import dataclass
 
 """
 steps for slp:
@@ -27,6 +28,7 @@ steps for slp:
 class GEFSLive:
     gespr: xr.Dataset
     geavg: xr.Dataset
+    fhour: int
 
 
 class MClimate:
@@ -75,7 +77,7 @@ class MClimate:
             self.generate_gefs_live_ds(basename)
             for basename in [basename_espr, basename_eavg]
         ]
-        gefs_live = GEFSLive(gespr=gespr, geavg=geavg)
+        gefs_live = GEFSLive(gespr=gespr, geavg=geavg, fhour=fhour)
         return gefs_live
 
     def generate_gefs_live_ds(self, basename_tuple: Tuple[str, str]) -> xr.Dataset:
