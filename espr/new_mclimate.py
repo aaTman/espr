@@ -111,7 +111,7 @@ class MClimate:
         )
         return zarr_ds
 
-    def run_spread_mclimate(self, fhour: int = 3):
+    def generate_mclimate(self, fhour: int = 3):
         gefs_r = self.gefs_retrospective(fhour=fhour)
         gefs_l = self.gefs_live(fhour=fhour)
         return gefs_r, gefs_l
