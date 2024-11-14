@@ -31,7 +31,7 @@ class GEFSLive:
     fhour: int
 
 
-class MClimate:
+class ModelMetadata:
     def __init__(
         self,
         date: Union[pd.Timestamp, datetime] = datetime.now(tz=pytz.UTC),
@@ -40,22 +40,24 @@ class MClimate:
         **kwargs,
     ):
         self.date = date
-        self.gefs_live_date = self.date
-        if self.gefs_live_date.hour % 6 != 0:
-            self.gefs_live_date = self.gefs_live_date.replace(
-                hour=(self.gefs_live_date.hour // 6) * 6,
-                minute=0,
-                second=0,
-                microsecond=0,
-            )
         self.variable = variable
-        self.centered_date_range = kwargs.get("centered_date_range", 10)
         self._temp_dir = TemporaryDirectory() if directory is None else None
         self.directory = directory if directory is not None else self._temp_dir.name
         self.so = {"anon": True, "skip_instance_cache": True}
         self.fs_local = fsspec.filesystem(
             "", skip_instance_cache=True, use_listings_cache=False
         )
+
+
+class MClimate(ModelMetadata):
+    def __init__(
+        self,
+        date: Union[pd.Timestamp, datetime] = datetime.now(tz=pytz.UTC),
+        variable: str = "pres_msl",
+        directory: Optional[str] = None,
+        **kwargs,
+    ):
+        self.centered_date_range = kwargs.get("centered_date_range", 10)
 
     def gefs_retrospective(self, fhour: int = 3) -> xr.Dataset:
         gefs_r = RetrospectivePull(
@@ -68,9 +70,24 @@ class MClimate:
         ds = gefs_r.generate_kerchunk(ds=True)
         return ds
 
+    def generate_mclimate(self, fhour: int = 3):
+        gefs_r = self.gefs_retrospective(fhour=fhour)
+        return gefs_r
+
+
+class GEFSLivePull(ModelMetadata):
+    def __init__(self):
+        if self.date.hour % 6 != 0:
+            self.date = self.date.replace(
+                hour=(self.date.hour // 6) * 6,
+                minute=0,
+                second=0,
+                microsecond=0,
+            )
+
     def gefs_live(self, fhour: int = 3) -> GEFSLive:
-        self.gefs_live_date, basename_espr, basename_eavg = ut.find_most_recent_gefs(
-            self.gefs_live_date, fhour
+        self.date, basename_espr, basename_eavg = ut.find_most_recent_gefs(
+            self.date, fhour
         )
 
         gespr, geavg = [
@@ -110,8 +127,3 @@ class MClimate:
             chunks={"valid_time": 1},
         )
         return zarr_ds
-
-    def generate_mclimate(self, fhour: int = 3):
-        gefs_r = self.gefs_retrospective(fhour=fhour)
-        gefs_l = self.gefs_live(fhour=fhour)
-        return gefs_r, gefs_l
