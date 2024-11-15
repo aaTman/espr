@@ -45,6 +45,7 @@ class EnsembleProduct:
         )
         return probability_matched_mean
 
+    ## old code used to pull from, will remove/is not used
     def pmm(ens):
         # Takes the mean of the ensemble
         ensMean = np.mean(ens, axis=1)
