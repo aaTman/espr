@@ -93,48 +93,104 @@ class GEFSLivePull(ModelMetadata):
                 second=0,
                 microsecond=0,
             )
+        self.gefs_uri_dict = {
+            "spr": None,
+            "avg": None,
+            "c00": None,
+            **{f"p{i:02d}": None for i in range(1, 31)},
+        }
 
     def gefs_live(self, ensemble: bool = False, fhour: int = 3) -> GEFSLive:
-        self.date, basename_espr, basename_eavg = ut.find_most_recent_gefs(
-            self.date, fhour, data_type=["avg", "spr"]
+        self.date, self.gefs_uri_dict = ut.most_recent_gefs(
+            self.date, fhour, self.gefs_uri_dict
         )
-
-        gespr, geavg, geens = [
-            self.generate_gefs_live_ds(basename, ensemble=ensemble)
-            for basename in [basename_espr, basename_eavg]
+        [
+            self.generate_gefs_jsons(ens_key, link, ensemble=ensemble)
+            for ens_key, link in self.gefs_uri_dict.items()
         ]
-        gefs_live = GEFSLive(ge_spr=gespr, ge_avg=geavg, ge_ens=geens, fhour=fhour)
+        gefs_output_dict = self.generate_gefs_datasets(ensemble=ensemble)
+        gefs_live = GEFSLive(
+            ge_spr=gefs_output_dict["spr"],
+            ge_avg=gefs_output_dict["avg"],
+            ge_ens=gefs_output_dict["ens"],
+            fhour=fhour,
+        )
         return gefs_live
 
-    def generate_gefs_live_ds(
-        self, basename_tuple: Tuple[str, str], ensemble: bool = False
-    ) -> xr.Dataset:
-        ut.gen_json(
-            file_url=basename_tuple[0],
-            fs_local=self.fs_local,
-            so=self.so,
-            json_dir=self.directory,
-            statistic=basename_tuple[1],
-        )
-        reference_jsons = self.fs_local.ls(self.directory)  # get list of file names
-        mzarr = MultiZarrToZarr(
-            [n for n in reference_jsons if basename_tuple[1] in n],
-            concat_dims=["valid_time"],
-            identical_dims=["latitude", "longitude", "step"],
-        )
-        translated_mzarr = mzarr.translate()
-        # open dataset as zarr object using fsspec reference file system and xarray
-        fs = fsspec.filesystem(
-            "reference",
-            fo=translated_mzarr,
-            remote_protocol="s3",
-            remote_options={"anon": True},
-        )
-        m = fs.get_mapper("")
-        zarr_ds = xr.open_dataset(
-            m,
-            engine="zarr",
-            backend_kwargs=dict(consolidated=False),
-            chunks={"valid_time": 1},
-        )
-        return zarr_ds
+    def generate_gefs_jsons(self, ens_key: str, link: str, ensemble: bool = False):
+        if ens_key in ["spr", "avg"]:
+            ut.gen_json(
+                file_url=link,
+                fs_local=self.fs_local,
+                so=self.so,
+                json_dir=self.directory,
+                ens_key=ens_key,
+            )
+        else:
+            if ensemble:
+                ut.gen_json(
+                    file_url=link,
+                    fs_local=self.fs_local,
+                    so=self.so,
+                    json_dir=self.directory,
+                    ens_key=ens_key,
+                )
+
+    def generate_gefs_datasets(self, ensemble: bool = False) -> xr.Dataset:
+        ds_dict = {"spr": None, "avg": None, "ens": None}
+        reference_jsons = self.fs_local.ls(self.directory)
+        for ens_key in ds_dict:
+            if ens_key == "ens":
+                if ensemble:
+                    if len(reference_jsons) == 33:
+                        reference_jsons_ensembles = [
+                            n
+                            for n in reference_jsons
+                            if "avg" not in n and "spr" not in n
+                        ]
+                        assert (
+                            len(reference_jsons_ensembles) == 31
+                        ), "Missing ensemble members"
+                        mzarr = MultiZarrToZarr(
+                            reference_jsons_ensembles,
+                            concat_dims=["valid_time", "number"],
+                            identical_dims=["latitude", "longitude", "step"],
+                        )
+                        translated_mzarr = mzarr.translate()
+                        fs = fsspec.filesystem(
+                            "reference",
+                            fo=translated_mzarr,
+                            remote_protocol="s3",
+                            remote_options={"anon": True},
+                        )
+                        m = fs.get_mapper("")
+                        zarr_ds = xr.open_dataset(
+                            m,
+                            engine="zarr",
+                            backend_kwargs=dict(consolidated=False),
+                            chunks={"valid_time": 1},
+                        )
+                        ds_dict[ens_key] = zarr_ds
+            else:
+                mzarr = MultiZarrToZarr(
+                    [n for n in reference_jsons if ens_key in n],
+                    concat_dims=["valid_time"],
+                    identical_dims=["latitude", "longitude", "step"],
+                )
+                translated_mzarr = mzarr.translate()
+                # open dataset as zarr object using fsspec reference file system and xarray
+                fs = fsspec.filesystem(
+                    "reference",
+                    fo=translated_mzarr,
+                    remote_protocol="s3",
+                    remote_options={"anon": True},
+                )
+                m = fs.get_mapper("")
+                zarr_ds = xr.open_dataset(
+                    m,
+                    engine="zarr",
+                    backend_kwargs=dict(consolidated=False),
+                    chunks={"valid_time": 1},
+                )
+                ds_dict[ens_key] = zarr_ds
+        return ds_dict

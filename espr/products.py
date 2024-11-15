@@ -1,9 +1,12 @@
-import xarray as xr
 from datetime import datetime
-from .core import MClimate, GEFSLivePull
-import numpy as np
 
-"""Putting methods here that generate these products so far:
+import numpy as np
+import xarray as xr
+
+from .core import GEFSLivePull, MClimate
+
+"""
+Putting methods here that generate these products so far:
 1. probability matched mean
 2. extreme forecast index
 3. mclimate event cdf/quantile
@@ -12,7 +15,8 @@ import numpy as np
 6. historical spread anomaly
 7. standardized spread anomaly
 8. crps of m-climate? only if the context can be provided
-9. dprog/dt analysis?"""
+9. dprog/dt analysis?
+"""
 
 
 class EnsembleProduct:
@@ -26,7 +30,7 @@ class EnsembleProduct:
         self.variable = variable
 
     def probability_matched_mean(self):
-        num_ensemble_members = len(self.gefs_live.ge_spr["number"])
+        num_ensemble_members = len(self.gefs_live.ge_ens["number"])
         sorted_ranked_ensemble_mean = np.argsort(
             self.gefs_live.ge_avg[self.variable].flatten()
         )  # this is probably wrong
@@ -77,12 +81,7 @@ class EnsembleProduct:
         )
 
         # Catch for errors, haven't had an issue so this might be useless.
-        try:
-            enspmm = enspmm.reshape((len(ensSort), len(ensMean[0]), len(ensMean[0, 0])))
-        except ValueError:
-
-            pdb.set_trace()
-
+        enspmm = enspmm.reshape((len(ensSort), len(ensMean[0]), len(ensMean[0, 0])))
         return enspmm
 
 

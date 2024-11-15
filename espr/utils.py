@@ -4,6 +4,8 @@ import os
 import shutil
 import subprocess
 from datetime import datetime
+from typing import Union
+
 import bottleneck
 import fsspec
 import matplotlib.pyplot as plt
@@ -13,7 +15,6 @@ import ujson
 import xarray as xr
 from kerchunk.grib2 import scan_grib
 from mpl_toolkits import axes_grid1
-from typing import Union
 
 
 def str_to_bool(s: str):
@@ -83,143 +84,36 @@ def add_colorbar(im, aspect=20, pad_fraction=0.5, **kwargs):
     return im.axes.figure.colorbar(im, cax=cax, **kwargs)
 
 
-def cleaner():
-    paths = json.load("paths.json")
-    plot_dir = paths["plot_dir"]
-    # for file_name in os.listdir(ps.output_dir):
-    #     if (datetime.now() - datetime.strptime(file_name[0:11],'%Y%m%d_%H')).total_seconds() > 604800:
-    #         os.remove(f'{ps.output_dir}{file_name}')
-    for file_name in os.listdir(plot_dir):
-        if (
-            datetime.now() - datetime.strptime(file_name[0:11], "%Y%m%d_%H")
-        ).total_seconds() > 604800:
-            shutil.rmtree(f"{plot_dir}{file_name}")
-
-
-def scp_call(source, dest):
-    subprocess.call(
-        ["scp", "-r", source, dest],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-
-
-def rsync_call(source, dest):
-    subprocess.call(
-        ["rsync", "-avh", "--delete-before", source, dest],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-
-
-def subset_sprd(percentile, mc_std):
-    mask = np.logical_and(
-        percentile >= percentile[-1] - 0.05, percentile <= percentile[-1] + 0.05
-    )
-    try:
-        mc_std = mc_std[[n for n in mc_std][0]]
-    except:
-        pass
-    mc_std.rename({"fhour": "time", "time": "fhour"})
-    mask_da = xr.DataArray(
-        mask[:-1],
-        coords={
-            "fhour": mc_std.fhour.values,
-            "time": mc_std.time.values,
-            "lat": mc_std.lat.values,
-            "lon": mc_std.lon.values,
-        },
-        dims={
-            "time": len(mc_std.time),
-            "fhour": len(mc_std.fhour),
-            "lat": len(mc_std.lat),
-            "lon": len(mc_std.lon),
-        },
-    )
-    mc_std_filtered = mc_std.where(~np.isnan(mask_da), drop=True)
-    return mc_std_filtered
-
-
-# Define a context manager to suppress stdout and stderr.
-class suppress_stdout_stderr(object):
-    """
-    A context manager for doing a "deep suppression" of stdout and stderr in
-    Python, i.e. will suppress all print, even if the print originates in a
-    compiled C/Fortran sub-function.
-       This will not suppress raised exceptions, since exceptions are printed
-    to stderr just before a script exits, and after the context manager has
-    exited (at least, I think that is why it lets exceptions through).
-    """
-
-    def __init__(self):
-        # Open a pair of null files
-        self.null_fds = [os.open(os.devnull, os.O_RDWR) for x in range(2)]
-        # Save the actual stdout (1) and stderr (2) file descriptors.
-        self.save_fds = [os.dup(1), os.dup(2)]
-
-    def __enter__(self):
-        # Assign the null pointers to stdout and stderr.
-        os.dup2(self.null_fds[0], 1)
-        os.dup2(self.null_fds[1], 2)
-
-    def __exit__(self, *_):
-        # Re-assign the real stdout/stderr back to (1) and (2)
-        os.dup2(self.save_fds[0], 1)
-        os.dup2(self.save_fds[1], 2)
-        # Close all file descriptors
-        for fd in self.null_fds + self.save_fds:
-            os.close(fd)
-
-
-def gen_json(file_url, fs_local, so, json_dir, statistic="spr"):
+def gen_json(file_url, fs_local, so, json_dir, ens_key="spr"):
     out = scan_grib(
         file_url, storage_options=so
     )  # create the reference using scan_grib
-    for i, message in enumerate(out):
+    for _, message in enumerate(out):
         key_ = [n for n in message["refs"].keys() if "0.0" in n]
         if "prmsl" in key_[0]:
-            with fs_local.open(f"{json_dir}/gefs_rt_{statistic}.json", "w") as f:
+            with fs_local.open(f"{json_dir}/gefs_rt_{ens_key}.json", "w") as f:
                 f.write(ujson.dumps(message))  # write to file
-                print(f"File {file_url} written to {json_dir}gefs_rt_{statistic}.json")
+                print(f"File {file_url} written to {json_dir}gefs_rt_{ens_key}.json")
 
 
-def find_most_recent_gefs(
-    gefs_live_date: datetime, fhour: int, data_type: Union[list, str] = "spr"
-):
-    fs = fsspec.filesystem("s3", anon=True, skip_instance_cache=True)
-    if isinstance(data_type, list):
-        basename_tuple = []
-        for dt in data_type:
-            basename_tuple.append(
-                f's3://noaa-gefs-pds/gefs.{gefs_live_date.strftime("%Y%m%d")}'
-                f'/{gefs_live_date.strftime("%H")}/atmos/pgrb2sp25/'
-                f'ge{data_type}.t{gefs_live_date.strftime("%H")}z.pgrb2s.0p25.f{fhour:03d}',
-                f"{data_type}",
-            )
-        while not fs.exists(basename_tuple[0][0]):
-            gefs_live_date -= np.timedelta64(6, "h")
-            basename_tuple.append(
-                f's3://noaa-gefs-pds/gefs.{gefs_live_date.strftime("%Y%m%d")}'
-                f'/{gefs_live_date.strftime("%H")}/atmos/pgrb2sp25/'
-                f'ge{data_type}.t{gefs_live_date.strftime("%H")}z.pgrb2s.0p25.f{fhour:03d}',
-                f"{data_type}",
-            )
-    else:
-        basename_tuple = (
+def uri_dict_recursive(uri_dict, gefs_live_date, fhour):
+    for key in uri_dict:
+        uri_dict[key] = (
             f's3://noaa-gefs-pds/gefs.{gefs_live_date.strftime("%Y%m%d")}'
             f'/{gefs_live_date.strftime("%H")}/atmos/pgrb2sp25/'
-            f'ge{data_type}.t{gefs_live_date.strftime("%H")}z.pgrb2s.0p25.f{fhour:03d}',
-            f"{data_type}",
+            f'ge{key}.t{gefs_live_date.strftime("%H")}z.pgrb2s.0p25.f{fhour:03d}'
         )
-        while not fs.exists(basename_tuple[0]):
+    return uri_dict
+
+
+def most_recent_gefs(gefs_live_date: datetime, fhour: int, uri_dict: dict):
+    fs = fsspec.filesystem("s3", anon=True, skip_instance_cache=True)
+    uri_dict = uri_dict_recursive(uri_dict, gefs_live_date, fhour)
+    for key in uri_dict:
+        while not fs.exists(uri_dict[key]):
             gefs_live_date -= np.timedelta64(6, "h")
-            basename_tuple = (
-                f's3://noaa-gefs-pds/gefs.{gefs_live_date.strftime("%Y%m%d")}'
-                f'/{gefs_live_date.strftime("%H")}/atmos/pgrb2sp25/'
-                f'ge{data_type}.t{gefs_live_date.strftime("%H")}z.pgrb2s.0p25.f{fhour:03d}',
-                f"{data_type}",
-            )
-    return gefs_live_date, basename_tuple
+            uri_dict = uri_dict_recursive(uri_dict, gefs_live_date, fhour)
+    return gefs_live_date, uri_dict
 
 
 def combine_fcast_and_mcli(fcast, mcli):
