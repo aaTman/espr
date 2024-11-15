@@ -1,5 +1,7 @@
 import xarray as xr
-
+from datetime import datetime
+from .core import MClimate, GEFSLivePull
+import numpy as np
 
 """Putting methods here that generate these products so far:
 1. probability matched mean
@@ -19,11 +21,68 @@ class EnsembleProduct:
     require all ensemble members in the dataset
     """
 
-    def __init__(self, ds: xr.Dataset):
-        self.ds = ds
+    def __init__(self, variable):
+        self.gefs_live = pull_gefs(ensemble=True)
+        self.variable = variable
 
     def probability_matched_mean(self):
-        pass
+        num_ensemble_members = len(self.gefs_live.ge_spr["number"])
+        sorted_ranked_ensemble_mean = np.argsort(
+            self.gefs_live.ge_avg[self.variable].flatten()
+        )  # this is probably wrong
+        sorted_index_ensemble_mean = np.argsort(sorted_ranked_ensemble_mean)
+        sorted_ranked_ensemble_members = np.argsort(
+            self.gefs_live.ge_spr[self.variable].flatten()
+        )[
+            0::num_ensemble_members
+        ]  # might need to change the order of this to subset first
+        probability_matched_mean = sorted_index_ensemble_mean[
+            sorted_ranked_ensemble_members
+        ][sorted_index_ensemble_mean]
+
+        probability_matched_mean = probability_matched_mean.reshape(
+            self.gefs_live.ge_avg[self.variable].shape
+        )
+        return probability_matched_mean
+
+    def pmm(ens):
+        # Takes the mean of the ensemble
+        ensMean = np.mean(ens, axis=1)
+
+        # Sets the sorted index array for each forecast hour's ensemble mean values low to high
+        ensMeanSort = np.array(
+            [np.argsort(ensMean[i].flatten()) for i in range(0, len(ensMean))]
+        )
+
+        # Sets the index array of the sorted ensemble mean index array; in simple
+        # terms this can be used to rearrange the data back to its original order
+        ensMeanSortSort = np.array(
+            [np.argsort(ensMeanSort[i]) for i in range(0, len(ensMeanSort))]
+        )
+
+        # Flattens the full ensemble by forecast hour
+        ensFlat = [ens[i].flatten() for i in range(0, len(ens))]
+
+        # Takes every 21st value to equal the size of the flattened mean array
+        ensFlat = np.array([ensFlat[i][0::21] for i in range(0, len(ens))])
+
+        # Sets the sorted index array from low to high for each forecast hour
+        ensSort = np.array([np.argsort(ensFlat[i]) for i in range(0, len(ens))])
+
+        # Replaces the ensemble mean values with the ensemble values, then returns
+        # the values to the original index of the ensemble mean.
+        enspmm = np.array(
+            [ensFlat[i][ensSort[i]][ensMeanSortSort[i]] for i in range(0, len(ensSort))]
+        )
+
+        # Catch for errors, haven't had an issue so this might be useless.
+        try:
+            enspmm = enspmm.reshape((len(ensSort), len(ensMean[0]), len(ensMean[0, 0])))
+        except ValueError:
+
+            pdb.set_trace()
+
+        return enspmm
 
 
 class MClimateProduct:
@@ -31,8 +90,9 @@ class MClimateProduct:
     Products which are generated from or use an m-climate dataset
     """
 
-    def __init__(self, ds: xr.Dataset):
-        self.ds = ds
+    def __init__(self, date: datetime):
+        mc = MClimate()
+        gefs_r = mc.generate_mclimate()
 
     def event_cdf(self):
         pass
@@ -66,3 +126,9 @@ class MiscProduct:
 
     def dprog_dt(self):
         pass
+
+
+def pull_gefs(ensemble: bool = False):
+    gefs_object = GEFSLivePull()
+    gefs_l = gefs_object.gefs_live(ensemble=ensemble)
+    return gefs_l

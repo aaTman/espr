@@ -26,8 +26,9 @@ steps for slp:
 
 @dataclass
 class GEFSLive:
-    gespr: xr.Dataset
-    geavg: xr.Dataset
+    ge_spr: Union[xr.Dataset, None]
+    ge_avg: Union[xr.Dataset, None]
+    ge_ens: Union[xr.Dataset, None]
     fhour: int
 
 
@@ -57,6 +58,7 @@ class MClimate(ModelMetadata):
         directory: Optional[str] = None,
         **kwargs,
     ):
+        super().__init__(date, variable, directory, **kwargs)
         self.centered_date_range = kwargs.get("centered_date_range", 10)
 
     def gefs_retrospective(self, fhour: int = 3) -> xr.Dataset:
@@ -76,7 +78,14 @@ class MClimate(ModelMetadata):
 
 
 class GEFSLivePull(ModelMetadata):
-    def __init__(self):
+    def __init__(
+        self,
+        date: Union[pd.Timestamp, datetime] = datetime.now(tz=pytz.UTC),
+        variable: str = "pres_msl",
+        directory: Optional[str] = None,
+        **kwargs,
+    ):
+        super().__init__(date, variable, directory, **kwargs)
         if self.date.hour % 6 != 0:
             self.date = self.date.replace(
                 hour=(self.date.hour // 6) * 6,
@@ -85,19 +94,21 @@ class GEFSLivePull(ModelMetadata):
                 microsecond=0,
             )
 
-    def gefs_live(self, fhour: int = 3) -> GEFSLive:
+    def gefs_live(self, ensemble: bool = False, fhour: int = 3) -> GEFSLive:
         self.date, basename_espr, basename_eavg = ut.find_most_recent_gefs(
             self.date, fhour
         )
 
-        gespr, geavg = [
-            self.generate_gefs_live_ds(basename)
+        gespr, geavg, geens = [
+            self.generate_gefs_live_ds(basename, ensemble=ensemble)
             for basename in [basename_espr, basename_eavg]
         ]
-        gefs_live = GEFSLive(gespr=gespr, geavg=geavg, fhour=fhour)
+        gefs_live = GEFSLive(ge_spr=gespr, ge_avg=geavg, ge_ens=geens, fhour=fhour)
         return gefs_live
 
-    def generate_gefs_live_ds(self, basename_tuple: Tuple[str, str]) -> xr.Dataset:
+    def generate_gefs_live_ds(
+        self, basename_tuple: Tuple[str, str], ensemble: bool = False
+    ) -> xr.Dataset:
         ut.gen_json(
             file_url=basename_tuple[0],
             fs_local=self.fs_local,

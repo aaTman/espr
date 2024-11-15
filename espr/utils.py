@@ -183,35 +183,23 @@ def gen_json(file_url, fs_local, so, json_dir, statistic="spr"):
                 print(f"File {file_url} written to {json_dir}gefs_rt_{statistic}.json")
 
 
-def find_most_recent_gefs(gefs_live_date: datetime, fhour: int):
+def find_most_recent_gefs(gefs_live_date: datetime, fhour: int, data_type: str = "spr"):
     fs = fsspec.filesystem("s3", anon=True, skip_instance_cache=True)
-    basename_espr = (
+    basename_tuple = (
         f's3://noaa-gefs-pds/gefs.{gefs_live_date.strftime("%Y%m%d")}'
         f'/{gefs_live_date.strftime("%H")}/atmos/pgrb2sp25/'
-        f'gespr.t{gefs_live_date.strftime("%H")}z.pgrb2s.0p25.f{fhour:03d}',
-        "spr",
+        f'ge{data_type}.t{gefs_live_date.strftime("%H")}z.pgrb2s.0p25.f{fhour:03d}',
+        f"{data_type}",
     )
-    basename_eavg = (
-        f's3://noaa-gefs-pds/gefs.{gefs_live_date.strftime("%Y%m%d")}'
-        f'/{gefs_live_date.strftime("%H")}/atmos/pgrb2sp25/'
-        f'geavg.t{gefs_live_date.strftime("%H")}z.pgrb2s.0p25.f{fhour:03d}',
-        "avg",
-    )
-    while not fs.exists(basename_espr[0]) and not fs.exists(basename_eavg[1]):
+    while not fs.exists(basename_tuple[0]):
         gefs_live_date -= np.timedelta64(6, "h")
-        basename_espr = (
+        basename_tuple = (
             f's3://noaa-gefs-pds/gefs.{gefs_live_date.strftime("%Y%m%d")}'
             f'/{gefs_live_date.strftime("%H")}/atmos/pgrb2sp25/'
-            f'gespr.t{gefs_live_date.strftime("%H")}z.pgrb2s.0p25.f{fhour:03d}',
-            "spr",
+            f'ge{data_type}.t{gefs_live_date.strftime("%H")}z.pgrb2s.0p25.f{fhour:03d}',
+            f"{data_type}",
         )
-        basename_eavg = (
-            f's3://noaa-gefs-pds/gefs.{gefs_live_date.strftime("%Y%m%d")}'
-            f'/{gefs_live_date.strftime("%H")}/atmos/pgrb2sp25/'
-            f'geavg.t{gefs_live_date.strftime("%H")}z.pgrb2s.0p25.f{fhour:03d}',
-            "avg",
-        )
-    return gefs_live_date, basename_espr, basename_eavg
+    return gefs_live_date, basename_tuple
 
 
 def combine_fcast_and_mcli(fcast, mcli):
