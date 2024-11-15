@@ -13,6 +13,7 @@ import ujson
 import xarray as xr
 from kerchunk.grib2 import scan_grib
 from mpl_toolkits import axes_grid1
+from typing import Union
 
 
 def str_to_bool(s: str):
@@ -182,22 +183,42 @@ def gen_json(file_url, fs_local, so, json_dir, statistic="spr"):
                 print(f"File {file_url} written to {json_dir}gefs_rt_{statistic}.json")
 
 
-def find_most_recent_gefs(gefs_live_date: datetime, fhour: int, data_type: str = "spr"):
+def find_most_recent_gefs(
+    gefs_live_date: datetime, fhour: int, data_type: Union[list, str] = "spr"
+):
     fs = fsspec.filesystem("s3", anon=True, skip_instance_cache=True)
-    basename_tuple = (
-        f's3://noaa-gefs-pds/gefs.{gefs_live_date.strftime("%Y%m%d")}'
-        f'/{gefs_live_date.strftime("%H")}/atmos/pgrb2sp25/'
-        f'ge{data_type}.t{gefs_live_date.strftime("%H")}z.pgrb2s.0p25.f{fhour:03d}',
-        f"{data_type}",
-    )
-    while not fs.exists(basename_tuple[0]):
-        gefs_live_date -= np.timedelta64(6, "h")
+    if isinstance(data_type, list):
+        basename_tuple = []
+        for dt in data_type:
+            basename_tuple.append(
+                f's3://noaa-gefs-pds/gefs.{gefs_live_date.strftime("%Y%m%d")}'
+                f'/{gefs_live_date.strftime("%H")}/atmos/pgrb2sp25/'
+                f'ge{data_type}.t{gefs_live_date.strftime("%H")}z.pgrb2s.0p25.f{fhour:03d}',
+                f"{data_type}",
+            )
+        while not fs.exists(basename_tuple[0][0]):
+            gefs_live_date -= np.timedelta64(6, "h")
+            basename_tuple.append(
+                f's3://noaa-gefs-pds/gefs.{gefs_live_date.strftime("%Y%m%d")}'
+                f'/{gefs_live_date.strftime("%H")}/atmos/pgrb2sp25/'
+                f'ge{data_type}.t{gefs_live_date.strftime("%H")}z.pgrb2s.0p25.f{fhour:03d}',
+                f"{data_type}",
+            )
+    else:
         basename_tuple = (
             f's3://noaa-gefs-pds/gefs.{gefs_live_date.strftime("%Y%m%d")}'
             f'/{gefs_live_date.strftime("%H")}/atmos/pgrb2sp25/'
             f'ge{data_type}.t{gefs_live_date.strftime("%H")}z.pgrb2s.0p25.f{fhour:03d}',
             f"{data_type}",
         )
+        while not fs.exists(basename_tuple[0]):
+            gefs_live_date -= np.timedelta64(6, "h")
+            basename_tuple = (
+                f's3://noaa-gefs-pds/gefs.{gefs_live_date.strftime("%Y%m%d")}'
+                f'/{gefs_live_date.strftime("%H")}/atmos/pgrb2sp25/'
+                f'ge{data_type}.t{gefs_live_date.strftime("%H")}z.pgrb2s.0p25.f{fhour:03d}',
+                f"{data_type}",
+            )
     return gefs_live_date, basename_tuple
 
 

@@ -96,7 +96,7 @@ class GEFSLivePull(ModelMetadata):
 
     def gefs_live(self, ensemble: bool = False, fhour: int = 3) -> GEFSLive:
         self.date, basename_espr, basename_eavg = ut.find_most_recent_gefs(
-            self.date, fhour
+            self.date, fhour, data_type=["avg", "spr"]
         )
 
         gespr, geavg, geens = [
