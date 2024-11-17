@@ -31,25 +31,34 @@ class EnsembleProduct:
 
     def probability_matched_mean(self):
         num_ensemble_members = len(self.gefs_live.ge_ens["number"])
-        sorted_ranked_ensemble_mean = np.argsort(
-            self.gefs_live.ge_avg[self.variable].flatten()
-        )  # this is probably wrong
-        sorted_index_ensemble_mean = np.argsort(sorted_ranked_ensemble_mean)
-        sorted_ranked_ensemble_members = np.argsort(
-            self.gefs_live.ge_spr[self.variable].flatten()
-        )[
-            0::num_ensemble_members
-        ]  # might need to change the order of this to subset first
-        probability_matched_mean = sorted_index_ensemble_mean[
-            sorted_ranked_ensemble_members
-        ][sorted_index_ensemble_mean]
+        ensemble_mean_array = self.gefs_live.ge_avg[self.variable].squeeze().values
+        ensemble_array = self.gefs_live.ge_ens[self.variable].squeeze().values
+        # Sets the sorted index array for each forecast hour's ensemble mean values low to high
+        ensemble_mean_array_sort = np.array(np.argsort(ensemble_mean_array.flatten()))
 
+        # Sets the index array of the sorted ensemble mean index array; in simple
+        # terms this can be used to rearrange the data back to its original order
+        ensemble_mean_array_sort_sort = np.array(np.argsort(ensemble_mean_array_sort))
+
+        # Flattens the full ensemble by forecast hour, might need to split the broadcast to another line
+        ensemble_flattened = ensemble_array.flatten()[0::num_ensemble_members]
+
+        # Sets the sorted index array from low to high for each forecast hour
+        ensemble_sorted = np.array(np.argsort(ensemble_flattened))
+
+        # Replaces the ensemble mean values with the ensemble values, then returns
+        # the values to the original index of the ensemble mean.
+        probability_matched_mean = np.array(
+            ensemble_flattened[ensemble_sorted][ensemble_mean_array_sort_sort]
+        )
+
+        # Catch for errors, haven't had an issue so this might be useless.
         probability_matched_mean = probability_matched_mean.reshape(
             self.gefs_live.ge_avg[self.variable].shape
         )
         return probability_matched_mean
 
-    ## old code used to pull from, will remove/is not used
+    # old code used to pull from, will remove/is not used
     def pmm(ens):
         # Takes the mean of the ensemble
         ensMean = np.mean(ens, axis=1)
