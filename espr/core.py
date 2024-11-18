@@ -18,6 +18,7 @@ steps for slp:
 3. get the full model climatology based on the datetime
 4. any cleanup that's needed, do it
 5. combine the mclimate MEAN and the forecast MEAN to grab the percentile using bottleneck rankdata
+...this takes a ridiculously long amount of time, need to consider alternative 
 6. use the percentile to subset the spread based on whatever the percentile bounds are
     a. this might need weird masking that i already did in transforms.py/subset_sprd
 7. use the forecast spread and subset spread to use the HSA function and get hsa + standardized spread anomaly

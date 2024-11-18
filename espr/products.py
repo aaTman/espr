@@ -7,15 +7,19 @@ from .core import GEFSLivePull, MClimate
 
 """
 Putting methods here that generate these products so far:
-1. probability matched mean
+1. probability matched mean - done? need to test if its taking every 31st 
+random value or ranked value
 2. extreme forecast index
 3. mclimate event cdf/quantile
 4. shift of tails
-5. % of time validating within dataset
-6. historical spread anomaly
-7. standardized spread anomaly
-8. crps of m-climate? only if the context can be provided
-9. dprog/dt analysis?
+5. % of time x forecast exists within dataset
+6. % of time x forecast's distribution of outcomes validates<- maybe the most important?
+7. historical spread anomaly
+8. standardized spread anomaly
+9. crps of m-climate? only if the context can be provided
+10. dprog/dt analysis?
+11. typical outcomes of similar dprogdt trends in gefs reforecast
+
 """
 
 
