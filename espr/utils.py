@@ -84,16 +84,20 @@ def add_colorbar(im, aspect=20, pad_fraction=0.5, **kwargs):
     return im.axes.figure.colorbar(im, cax=cax, **kwargs)
 
 
-def gen_json(file_url, fs_local, so, json_dir, ens_key="spr"):
+def gen_json(file_url, fs_local, so, json_dir, ens_key="spr", return_vars=False):
     out = scan_grib(
         file_url, storage_options=so
     )  # create the reference using scan_grib
+    available_vars = []
     for _, message in enumerate(out):
         key_ = [n for n in message["refs"].keys() if "0.0" in n]
+        available_vars.append(key_[0].split("/")[0])
         if "prmsl" in key_[0]:
             with fs_local.open(f"{json_dir}/gefs_rt_{ens_key}.json", "w") as f:
                 f.write(ujson.dumps(message))  # write to file
                 print(f"File {file_url} written to {json_dir}gefs_rt_{ens_key}.json")
+    if return_vars:
+        return available_vars
 
 
 def uri_dict_recursive(uri_dict, gefs_live_date, fhour):

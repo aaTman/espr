@@ -119,21 +119,23 @@ class GEFSLivePull(ModelMetadata):
 
     def generate_gefs_jsons(self, ens_key: str, link: str, ensemble: bool = False):
         if ens_key in ["spr", "avg"]:
-            ut.gen_json(
+            self.gefs_vars = ut.gen_json(
                 file_url=link,
                 fs_local=self.fs_local,
                 so=self.so,
                 json_dir=self.directory,
                 ens_key=ens_key,
+                return_vars=True,
             )
         else:
             if ensemble:
-                ut.gen_json(
+                self.gefs_vars = ut.gen_json(
                     file_url=link,
                     fs_local=self.fs_local,
                     so=self.so,
                     json_dir=self.directory,
                     ens_key=ens_key,
+                    return_vars=True,
                 )
 
     def generate_gefs_datasets(self, ensemble: bool = False) -> xr.Dataset:
